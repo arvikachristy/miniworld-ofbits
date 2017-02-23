@@ -11,12 +11,12 @@ from collections import deque, namedtuple
 
 # Global dictionary with set parameters for the Deep-Q Network
 ri_dict = {
-  "num_Episodes" : 1000,
+  "num_Episodes" : 10000,
   'num_Actions' : 5,
   'replay_memory_size' : 5000,
   'replay_memory_init_size' : 500,
   'update_target_estimator_every' : 1000,
-  'discount_factor' : 0.90,
+  'discount_factor' : 0.99,
   'epsilon_start' : 1.0,
   'epsilon_end': 0.1,
   'epsilon_decay_steps': 5000,
@@ -71,7 +71,8 @@ class qNetwork():
     #Integer ID of which action was selected
     self.actions_pl = tf.placeholder(shape = [None], dtype = tf.int32, name = "actions")
 
-    X = tf.to_float(self.X_pl) #Simply converts X_pl to float
+    X = tf.to_float(self.X_pl) / 255.0 
+
     batch_size = tf.shape(self.X_pl)[0] #Gets the first index from the shape of X_pl (number of batches)
 
     #Three convolutional layers
@@ -82,7 +83,7 @@ class qNetwork():
     #Fully connected layers
     flattened = tf.contrib.layers.flatten(conv3)
     fcl = tf.contrib.layers.fully_connected(flattened, 512)
-    self.predictions = tf.contrib.layers.fully_connected(fcl, ri_dict["num_Actions"])
+    self.predictions = tf.contrib.layers.fully_connected(inputs = fcl, num_outputs = ri_dict["num_Actions"])
 
     #Get the predictions for the chosen actions only
     gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions_pl
@@ -133,7 +134,8 @@ def make_epsilon_greedy_policy(qnetwork, numA):
     A = np.ones(numA, dtype = float) * epsilon / numA
     q_values = qnetwork.predict(sess, np.expand_dims(observation,0))[0]
     best_action = np.argmax(q_values)
-    print "Best Action <---------------------------------------------------------------------------------------"
+    print "Policy Values <---------"
+    print q_values
     print best_action
     A[best_action] += (1.0 - epsilon)
     return A
@@ -186,6 +188,8 @@ def chooseAction(action_prob):
     return -1
   elif ri_dict["startState"] == 0:
     act = np.random.choice(np.arange(0,5), p = action_prob)
+    print "Chosen Action <--------------"
+    print act
     return act
 
 #doAction returns the next action
@@ -249,14 +253,11 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
   if state == [None]:
     while state == [None]:
       state, reward, done, _ = env.step([[]])
-      env.render()
 
+  env.render()
   state = state_proc.process(sess, (state[0])['vision'])
-  
   # We stack to take 4 instances of states
   state = np.stack([state] * 4, axis = 2)
-  
-  env.render()
 
   #The following loop is to simply fill the replay memory with transition tuples. The number of iterations is stated in the initial parameters
   for i in range(ri_dict["replay_memory_init_size"]):
@@ -275,7 +276,6 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
     if next_state == [None]:
       while next_state == [None]:
         next_state, reward, done, _ = env.step([[]])
-        env.render()
     env.render()
     next_state = state_proc.process(sess, (next_state[0])['vision'])
     next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
@@ -290,9 +290,9 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
       if state == [None]:
         while state == [None]:
           state, reward, done, _ = env.step([[]])
+      env.render()
       state = state_proc.process(sess, (state[0])['vision'])
       state = np.stack([state] * 4, axis = 2)
-      env.render()
     else:
       state = next_state
       env.render()
@@ -308,7 +308,6 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
     if state == [None]:
       while state == [None]:
         state, reward, done, _ = env.step([[]])
-        env.render()
     env.render()
     state = state_proc.process(sess, (state[0])['vision'])
     state = np.stack([state] * 4, axis = 2)
@@ -329,7 +328,6 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
       sys.stdout.flush()
 
       #Take a step
-      print epsilon
       action_probs = policy(sess, state, epsilon)
       print action_probs
       act = chooseAction(action_probs)
@@ -338,7 +336,6 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
       if next_state == [None]:
         while next_state == [None]:
           next_state, reward, done, _ = env.step([[]])
-          env.render()
       env.render()
       next_state = state_proc.process(sess, (next_state[0])['vision'])
       next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
@@ -356,8 +353,10 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
       states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
 
       #Calculate the q values and targets
-      q_values_next = targetNetwork.predict(sess, next_states_batch)
-      targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * ri_dict["discount_factor"] * np.amax(q_values_next, axis = 1)
+      q_values_next = qnetwork.predict(sess, next_states_batch)
+      best_actions = np.argmax(q_values_next, axis = 1)
+      q_values_next_target = targetNetwork.predict(sess, next_states_batch)
+      targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * ri_dict["discount_factor"] * q_values_next_target[np.arange(ri_dict["batch_size"]), best_actions]
 
       #Perform gradient descent update
       states_batch = np.array(states_batch)
@@ -370,7 +369,7 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
       total_t += 1
 
 env = gym.make('wob.mini.ClickTest-v0')
-env.configure(remotes=1, fps=15,
+env.configure(remotes=1, fps=5,
               vnc_driver='go', 
               vnc_kwargs={'encoding': 'tight', 'compress_level': 0, 
                           'fine_quality_level': 100, 'subsample_level': 0})
