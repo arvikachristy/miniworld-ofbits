@@ -80,10 +80,10 @@ def doAction(a, x, y):
             return [universe.spaces.PointerEvent(x - small_step, y, 0)], x - small_step, y
     return [], x, y
 
-myAgent = agent(lr=1e-2,s_size=4,a_size=6,h_size=8) #Load the agent.
+myAgent = agent(lr=1e-2,s_size=1,a_size=6,h_size=8) #Load the agent.
 
-total_episodes = 5000 #Set total number of episodes to train agent on.
-max_ep = 999
+total_episodes = 20 #Set total number of episodes to train agent on.
+max_ep = 10
 update_frequency = 5
 
 init = tf.global_variables_initializer()
@@ -109,16 +109,18 @@ with tf.Session() as sess:
         for j in range(max_ep):
             #Choose either a random action or one from our network.
             print "HELOOOOO", s
-            a_dist = sess.run(myAgent.output,feed_dict={myAgent.state_in:[s]})
+            a_dist = sess.run(myAgent.output,feed_dict={myAgent.state_in:np.array([[0], [0]])})
             #a_dist = [[0.15,0.15,0.15,0.15,0.15,0.25]]
             a = np.random.choice(np.arange(0,6),p=a_dist[0])
             print a
             #a = np.argmax(a_dist == a) #takes the highest value from the array, but why a_dist==a?
-            doAction(a, prevX, prevY)
-            s1,r,d,_ = env.step(a) #Get our reward for taking an action given a bandit.
+            actionset= doAction(a, prevX, prevY)
+            print "GDJHSGD", actionset
+            s1,r,d,_ = env.step([actionset[0]]) #Get our reward for taking an action given a bandit.
+            print "GDJHSGD", actionset
             ep_history.append([s,a,r,s1])
             s = s1
-            running_reward += r
+            running_reward += r[0]
             if d == True:
                 #Update the network.
                 ep_history = np.array(ep_history)
@@ -138,11 +140,10 @@ with tf.Session() as sess:
                 total_reward.append(running_reward)
                 total_lenght.append(j)
                 break
-
+            env.render()
         
             #Update our running tally of scores.
         if i % 100 == 0:
             print np.mean(total_reward[-100:])
         i += 1
 
-env.render()
