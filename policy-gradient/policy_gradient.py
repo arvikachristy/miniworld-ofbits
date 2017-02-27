@@ -1,9 +1,9 @@
-import tensorflow as tf
-import tensorflow.contrib.slim as slim
-import numpy as np
 import gym
 import universe
-import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
+import tensorflow.contrib.slim as slim
+#import matplotlib.pyplot as plt
 
 env = gym.make('wob.mini.ClickTest-v0')
 env.configure(remotes=1, fps=5,
