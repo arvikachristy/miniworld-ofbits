@@ -51,22 +51,35 @@ class CriticNet:
 			])
             
             
-    def create_critic_net(self, num_states=4, num_actions=1):
+    def create_critic_net(self, num_states=1, num_actions=3):
         N_HIDDEN_1 = 400
         N_HIDDEN_2 = 300
-        critic_state_in = tf.placeholder("float",[None,num_states])
-        critic_action_in = tf.placeholder("float",[None,num_actions])    
+        critic_state_in = tf.placeholder("float",[2,num_states])
+        critic_action_in = tf.placeholder("float",[2,num_actions])
+        print "critic action: ", critic_action_in    
     
         W1_c = tf.Variable(tf.random_uniform([num_states,N_HIDDEN_1],-1/math.sqrt(num_states),1/math.sqrt(num_states)))
         B1_c = tf.Variable(tf.random_uniform([N_HIDDEN_1],-1/math.sqrt(num_states),1/math.sqrt(num_states)))
         W2_c = tf.Variable(tf.random_uniform([N_HIDDEN_1,N_HIDDEN_2],-1/math.sqrt(N_HIDDEN_1+num_actions),1/math.sqrt(N_HIDDEN_1+num_actions)))    
         W2_action_c = tf.Variable(tf.random_uniform([num_actions,N_HIDDEN_2],-1/math.sqrt(N_HIDDEN_1+num_actions),1/math.sqrt(N_HIDDEN_1+num_actions)))    
+        print "W2_action: ", W2_action_c
         B2_c= tf.Variable(tf.random_uniform([N_HIDDEN_2],-1/math.sqrt(N_HIDDEN_1+num_actions),1/math.sqrt(N_HIDDEN_1+num_actions))) 
         W3_c= tf.Variable(tf.random_uniform([N_HIDDEN_2,1],-0.003,0.003))
         B3_c= tf.Variable(tf.random_uniform([1],-0.003,0.003))
     
         H1_c=tf.nn.softplus(tf.matmul(critic_state_in,W1_c)+B1_c)
-        H2_c=tf.nn.tanh(tf.matmul(H1_c,W2_c)+tf.matmul(critic_action_in,W2_action_c)+B2_c)
+
+        arg1 = tf.matmul(H1_c,W2_c)
+        arg2 = tf.matmul(critic_action_in,W2_action_c)
+        arg3 = B2_c
+
+        print "Tensor dimension 1: ", arg1.get_shape().as_list()
+        print "Tensor dimension 2: ", arg2.get_shape().as_list()
+
+        arg1 = tf.reshape(arg1, tf.TensorShape([2*300, 1]))
+        arg2 = tf.reshape(arg2, tf.TensorShape([2*300, 1]))
+
+        H2_c=tf.nn.tanh(arg1+arg2+arg3)
             
         critic_q_model=tf.matmul(H2_c,W3_c)+B3_c
             
@@ -74,11 +87,16 @@ class CriticNet:
         return W1_c, B1_c, W2_c, W2_action_c, B2_c, W3_c, B3_c, critic_q_model, critic_state_in, critic_action_in
     
     def train_critic(self, state_t_batch, action_batch, y_i_batch ):
-        self.sess.run(self.optimizer, feed_dict={self.critic_state_in: state_t_batch, self.critic_action_in:action_batch, self.q_value_in: y_i_batch})
+        print "target critic commented out"
+        # print "state_t_batch", state_t_batch
+        # print "action_batch", action_batch
+        # print "y_i_batch", y_i_batch
+        #self.sess.run(self.optimizer, feed_dict={self.critic_state_in: state_t_batch, self.critic_action_in:action_batch, self.q_value_in: y_i_batch})
              
     
     def evaluate_target_critic(self,state_t_1,action_t_1):
-        return self.sess.run(self.t_critic_q_model, feed_dict={self.t_critic_state_in: state_t_1, self.t_critic_action_in: action_t_1})    
+        print "target critic evaluation commented out"
+        #return self.sess.run(self.t_critic_q_model, feed_dict={self.t_critic_state_in: state_t_1, self.t_critic_action_in: action_t_1})    
         
     def compute_delQ_a(self,state_t,action_t):
 #        print '\n'
@@ -87,7 +105,8 @@ class CriticNet:
 #        print len(ch)
 #        print len(ch[0])        
 #        raw_input("Press Enter to continue...")        
-        return self.sess.run(self.action_gradients, feed_dict={self.critic_state_in: state_t,self.critic_action_in: action_t})
+        print "compute_delQ_a commented out"
+        #return self.sess.run(self.action_gradients, feed_dict={self.critic_state_in: state_t,self.critic_action_in: action_t})
 
     def update_target_critic(self):
         self.sess.run([
