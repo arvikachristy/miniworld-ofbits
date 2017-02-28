@@ -15,17 +15,17 @@ class QLearner():
   def __init__(self, h_size):
     self.num_actions = 6
     # 8064 = 42 * 64 * 3
-    self.scalarInput = tf.placeholder(shape=[None, 8064], dtype = tf.float32)
+    self.scalarInput = tf.placeholder(shape=[None, 84, 32, 3], dtype = tf.float32)
     self.imageIn = tf.reshape(self.scalarInput, shape=[-1, 84, 32, 3])
 
     self.conv1 = tf.contrib.layers.convolution2d( \
-        inputs=self.imageIn,num_outputs=32,kernel_size=[6,6],stride=[2,3],padding='VALID', biases_initializer=None)
+        inputs=self.imageIn,num_outputs=32,kernel_size=[5,5],stride=[3,2],padding='VALID', biases_initializer=None)
     self.conv2 = tf.contrib.layers.convolution2d( \
-        inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None)
+        inputs=self.conv1,num_outputs=64,kernel_size=[5,4],stride=[3,2],padding='VALID', biases_initializer=None)
     self.conv3 = tf.contrib.layers.convolution2d( \
-        inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID', biases_initializer=None)
+        inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[2,1],padding='VALID', biases_initializer=None)
     self.conv4 = tf.contrib.layers.convolution2d( \
-        inputs=self.conv3,num_outputs=512,kernel_size=[6,7],stride=[1,1],padding='VALID', biases_initializer=None)
+        inputs=self.conv3,num_outputs=512,kernel_size=[3,3],stride=[2,2],padding='VALID', biases_initializer=None)
 
     # We take the output from the final convolutional layer and split it into separate
     # advantage and value streams.
@@ -196,6 +196,7 @@ with tf.Session() as sess:
         ckpt = tf.train.get_checkpoint_state(path)
         saver.restore(sess,ckpt.model_checkpoint_path)
     sess.run(init)
+    sess.run(tf.variables_initializer([mainQN.VW, targetQN.VW]))
     updateTarget(targetOps,sess) #Set the target network to be equal to the primary network.
     i = 0
     s = env.reset()
@@ -229,7 +230,7 @@ with tf.Session() as sess:
             if np.random.rand(1) < e or total_steps < pre_train_steps:
                 a_num = np.random.randint(0,6)
             else:
-                a_num = sess.run(mainQN.predict,feed_dict={mainQN.scalarInput:[s], mainQn.cursorX:prevX, mainQn.cursorY:prevY})[0]
+                a_num = sess.run(mainQN.predict,feed_dict={mainQN.scalarInput:[s]})[0]
                 print j, 'Decided',
                 action_numbers = {0: 'CLICK', 1: 'STAY', 2: 'UP', 3: 'RIGHT', 4: 'DOWN', 5: 'LEFT'}
                 print action_numbers[a_num]
@@ -259,14 +260,14 @@ with tf.Session() as sess:
                 if total_steps % (update_freq) == 0:
                     trainBatch = myBuffer.sample(batch_size) #Get a random batch of experiences.
                     #Below we perform the Double-DQN update to the target Q-values
-                    Q1 = sess.run(mainQN.predict,feed_dict={mainQN.imageIn:np.stack(trainBatch[:,3])})
-                    Q2 = sess.run(targetQN.QOut,feed_dict={targetQN.imageIn:np.stack(trainBatch[:,3])})
+                    Q1 = sess.run(mainQN.predict,feed_dict={mainQN.scalarInput:np.stack(trainBatch[:,3])})
+                    Q2 = sess.run(targetQN.QOut,feed_dict={targetQN.scalarInput:np.stack(trainBatch[:,3])})
                     end_multiplier = -(trainBatch[:,4] - 1)
                     doubleQ = Q2[range(batch_size),Q1]
                     targetQ = trainBatch[:,2] + (y*doubleQ * end_multiplier)
                     #Update the network with our target values.
                     _ = sess.run(mainQN.updateModel, \
-                        feed_dict={mainQN.imageIn:np.stack(trainBatch[:,0]),
+                        feed_dict={mainQN.scalarInput:np.stack(trainBatch[:,0]),
                             mainQN.targetQ:targetQ,
                             mainQN.actions:trainBatch[:,1]})
                     
