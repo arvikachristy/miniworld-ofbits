@@ -6,6 +6,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import scipy.misc
 import os
+from output import output 
 
 from ExperienceBuffer import ExperienceBuffer
 
@@ -189,6 +190,7 @@ total_steps = 0
 #    os.makedirs(path)
 
 with tf.Session() as sess:
+    f = output()
     mainQN = QLearner(h_size)
     targetQN = QLearner(h_size)
     if load_model == True:
@@ -275,6 +277,7 @@ with tf.Session() as sess:
             
             if d[0] == True:
                 rewards.append([i, r[0]])
+		f.newEandR(i,r[0])
                 if r[0] > 0:
                     print 'Success'
                 s = s1
