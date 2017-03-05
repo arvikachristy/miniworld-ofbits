@@ -143,14 +143,14 @@ def isValidObservation(s):
     return s is not None and len(s) > 0 and s[0] is not None and type(s[0]) == dict and 'vision' in s[0]
 
 
-batch_size = 10 #How many experiences to use for each training step.
-update_freq = 4 #How often to perform a training step.
+batch_size = 1 #How many experiences to use for each training step.
+update_freq = 10 #How often to perform a training step.
 y = .99 #Discount factor on the target Q-values
 startE = 1 #Starting chance of random action
 endE = 0.1 #Final chance of random action
 anneling_steps = 30000. #How many steps of training to reduce startE to endE.
 num_episodes = 7000 #How many episodes of game environment to train network with.
-pre_train_steps = 2000#0 #How many steps of random actions before training begins.
+pre_train_steps = 500 #How many steps of random actions before training begins.
 #max_epLength = 5000 #The max allowed length of our episode.
 load_model = False #Whether to load a saved model.
 path = "./dqn-model" #The path to save our model to.
@@ -190,6 +190,10 @@ jList = []
 rList = []
 total_steps = 0
 
+successes = 0
+fails = 0
+misses = 0
+
 #Make a path for our model to be saved in.
 #if not os.path.exists(path):
 #    os.makedirs(path)
@@ -200,7 +204,6 @@ with tf.Session() as sess:
         ckpt = tf.train.get_checkpoint_state(path)
         saver.restore(sess,ckpt.model_checkpoint_path)
     sess.run(init)
-    #sess.run(tf.variables_initializer([mainQN.VW, targetQN.VW, mainQN.AW, targetQN.AW]))
     updateTarget(targetOps,sess) #Set the target network to be equal to the primary network.
     i = 0
     s = env.reset()
@@ -220,8 +223,6 @@ with tf.Session() as sess:
         while not isValidObservation(s):
             s, r, d, info = env.step([[universe.spaces.PointerEvent(prevX, prevY, 0)]])
         s = processState(s, prevY, prevX)
-        #if type(s) == tf.Tensor:
-        #    s = s.eval()
         s1 = s
         d = False
         rAll = 0
@@ -250,14 +251,11 @@ with tf.Session() as sess:
                 s1, r, d, info = env.step([a])
             env.render()
             s1 = processState(s1, prevY, prevX)
-            #if type(s1) == tf.Tensor:
-            #    s1 = s1.eval()
 
             if plot_vision:
                 plt.close()
                 plt.imshow(s1)
                 plt.show(block=False)
-            total_steps += 1
             episodeBuffer.add(np.reshape(np.array([s,a_num,r[0],s1,d[0]]),[1,5])) #Save the experience to our episode buffer.
             
             if total_steps > pre_train_steps:
@@ -283,24 +281,36 @@ with tf.Session() as sess:
             rAll += r[0]
             
             if d[0] == True:
-                rewards.append([i, r[0]])
-                if r[0] > 0:
+                if r[0] == 0:
+                    misses += 1
+                elif r[0] > 0:
+                    successes += 1
                     print 'Success'
+                else:
+                    fails += 1
+                rewards.append([i, r[0]])
+                rewards = rewards[-100:]
+                total_steps += j
+                print 'Steps taken this episode:', j
             s = s1
         
         #Get all experiences from this episode and discount their rewards.
         myBuffer.add(episodeBuffer.buffer)
         jList.append(j)
         rList.append(rAll)
+
         #TODO: Periodically save the model.
         #if i % 500 == 0:
         #    saver.save(sess,path+'/model', global_step=i)#+'.cptk')
         #    print "Saved Model"
-        if len(rList) % 10 == 0:
-            print total_steps,np.mean(rList[-10:]), e
-            #print 'Actions', mainQN.actions
-            #print 'Actions 1hot', mainQN.actions_onehot
-            #print 'Q', mainQN.Q
+        if i % 10 == 0:
+            print 'Actions taken', np.sum(jList)
+            print 'Average reward (last 100):', np.mean(rList[-100:]), '(last 10)', np.mean(rList[-10:])
+            print 'Epsilon:', e
+            print 'Successes:', successes, ':', float(successes)/len(rList), '\t', \
+            'Fails:', fails, ':', float(fails)/len(rList), '\t', \
+            'Misses:', misses, ':', float(misses)/len(rList), '\t' \
+            'avg steps/episode (last 100):', np.mean(jList[-100:]), '(last 10)', np.mean(jList[-10:])
             print 'Rewards', rewards
     #saver.save(sess,path+'/model-'+str(i)+'.cptk')
 print "Percent of succesful episodes: " + str(sum(rList)/num_episodes) + "%"
