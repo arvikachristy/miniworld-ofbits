@@ -11,14 +11,14 @@ from tensorflow_grad_inverter import grad_inverter
 REPLAY_MEMORY_SIZE = 10000
 BATCH_SIZE = 64
 GAMMA=0.99
-is_grad_inverter = True
+is_grad_inverter = False
 class DDPG:
     
     """ Deep Deterministic Policy Gradient Algorithm"""
     def __init__(self,env, is_batch_norm):
         self.env = env 
-        self.num_states = env.observation_space.shape[0]
-        self.num_actions = env.action_space.shape[0]
+        self.num_states = 1 
+        self.num_actions = 3
         
         
         if is_batch_norm:
@@ -36,8 +36,8 @@ class DDPG:
         self.time_step = 0
         self.counter = 0
         
-        action_max = np.array(env.action_space.high).tolist()
-        action_min = np.array(env.action_space.low).tolist()        
+        action_max = [75+210, 10+160] 
+        action_min = [75,10]      
         action_bounds = [action_max,action_min] 
         self.grad_inv = grad_inverter(action_bounds)
         
@@ -67,6 +67,8 @@ class DDPG:
         self.state_t_1_batch = np.array( self.state_t_1_batch)
         self.action_batch = [item[2] for item in batch]
         self.action_batch = np.array(self.action_batch)
+        #print "action batch: ", self.action_batch
+        #print "len(action batch), num actions", [len(self.action_batch),self.num_actions]
         self.action_batch = np.reshape(self.action_batch,[len(self.action_batch),self.num_actions])
         self.reward_batch = [item[3] for item in batch]
         self.reward_batch = np.array(self.reward_batch)
@@ -85,9 +87,10 @@ class DDPG:
                            
             if self.done_batch[i]:
                 self.y_i_batch.append(self.reward_batch[i])
-            else:
-                
-                self.y_i_batch.append(self.reward_batch[i] + GAMMA*q_t_1[i][0])                 
+                print "batch complete"
+            #else:
+                #print "batch has not been complete yet"
+                #self.y_i_batch.append(self.reward_batch[i] + GAMMA*q_t_1[i][0])                 
         
         self.y_i_batch=np.array(self.y_i_batch)
         self.y_i_batch = np.reshape(self.y_i_batch,[len(self.y_i_batch),1])
@@ -101,11 +104,11 @@ class DDPG:
         if is_grad_inverter:        
             self.del_Q_a = self.critic_net.compute_delQ_a(self.state_t_batch,action_for_delQ)#/BATCH_SIZE            
             self.del_Q_a = self.grad_inv.invert(self.del_Q_a,action_for_delQ) 
-        else:
-            self.del_Q_a = self.critic_net.compute_delQ_a(self.state_t_batch,action_for_delQ)[0]#/BATCH_SIZE
+        #else:
+            #self.del_Q_a = self.critic_net.compute_delQ_a(self.state_t_batch,action_for_delQ)[0]#/BATCH_SIZE
         
         # train actor network proportional to delQ/dela and del_Actor_model/del_actor_parameters:
-        self.actor_net.train_actor(self.state_t_batch,self.del_Q_a)
+        #self.actor_net.train_actor(self.state_t_batch,self.del_Q_a)
  
         # Update target Critic and actor network
         self.critic_net.update_target_critic()

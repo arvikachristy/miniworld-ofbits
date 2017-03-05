@@ -6,6 +6,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import scipy.misc
 import os
+from output import output 
 
 from ExperienceBuffer import ExperienceBuffer
 
@@ -173,6 +174,7 @@ targetQN = QLearner(h_size)
 init = tf.global_variables_initializer()
 
 #saver = tf.train.Saver()
+f = output()
 
 trainables = tf.trainable_variables()
 
@@ -285,9 +287,12 @@ with tf.Session() as sess:
                     misses += 1
                 elif r[0] > 0:
                     successes += 1
+                rewards.append([i, r[0]])
+                if r[0] > 0:
                     print 'Success'
                 else:
                     fails += 1
+                f.newEandR(i,r[0])
                 rewards.append([i, r[0]])
                 rewards = rewards[-100:]
                 total_steps += j

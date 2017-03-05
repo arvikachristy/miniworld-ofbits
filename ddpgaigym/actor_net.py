@@ -43,7 +43,7 @@ class ActorNet:
         
 
 
-    def create_actor_net(self, num_states=4, num_actions=1):
+    def create_actor_net(self, num_states=1, num_actions=3):
         """ Network that takes states and return action """
         N_HIDDEN_1 = 400
         N_HIDDEN_2 = 300
@@ -62,11 +62,11 @@ class ActorNet:
         
         
     def evaluate_actor(self,state_t):
-        return self.sess.run(self.actor_model, feed_dict={self.actor_state_in:state_t})        
+        return self.sess.run(self.actor_model, feed_dict={self.actor_state_in:np.array([[0],[0]])})    
         
         
     def evaluate_target_actor(self,state_t_1):
-        return self.sess.run(self.t_actor_model, feed_dict={self.t_actor_state_in: state_t_1})
+        return self.sess.run(self.t_actor_model, feed_dict={self.t_actor_state_in:np.array([[0],[0]])})
         
     def train_actor(self,actor_state_in,q_gradient_input):
         self.sess.run(self.optimizer, feed_dict={ self.actor_state_in: actor_state_in, self.q_gradient_input: q_gradient_input})
