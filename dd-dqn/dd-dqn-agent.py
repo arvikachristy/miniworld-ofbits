@@ -6,8 +6,8 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import scipy.misc
 import os
-from output import output 
 
+from output import output
 from ExperienceBuffer import ExperienceBuffer
 
 # DD-DQN implementation based on Arthur Juliani's tutorial "Simple Reinforcement Learning with Tensorflow Part 4: Deep Q-Networks and Beyond"

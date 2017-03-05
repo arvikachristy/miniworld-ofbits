@@ -69,6 +69,6 @@ class output:
 
     
 #f = output()
-#f.add()
+#f.newEandR(1, 0.5)
 #f.close()
 
