@@ -3,10 +3,11 @@ import universe
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
-#import matplotlib.pyplot as plt
+<<<<<<< HEAD
+import matplotlib.pyplot as plt
 
 env = gym.make('wob.mini.ClickTest-v0')
-env.configure(remotes=1, fps=5,
+env.configure(remotes=1, fps=2,
               vnc_driver='go', 
               vnc_kwargs={'encoding': 'tight', 'compress_level': 0, 
                           'fine_quality_level': 100, 'subsample_level': 0})
@@ -55,10 +56,10 @@ tf.reset_default_graph() #Clear the Tensorflow graph.
 
 
 def doAction(a, x, y):
-    small_step = 5
+    small_step = 25
     minY = 125
     maxY = 285
-    minX = 10
+    minX = 10  
     maxX = 170
     if a == 0:
         return [universe.spaces.PointerEvent(x, y, 0),
@@ -80,9 +81,16 @@ def doAction(a, x, y):
             return [universe.spaces.PointerEvent(x - small_step, y, 0)], x - small_step, y
     return [], x, y
 
+def manipulateState(s, coordX,coordY):
+    if s is not None and s[0] is not None:
+        vi = s[0]['vision']
+        print vi.shape
+
+    return [[0], [0]]
+
 myAgent = agent(lr=1e-2,s_size=1,a_size=6,h_size=8) #Load the agent.
 
-total_episodes = 20 #Set total number of episodes to train agent on.
+total_episodes = 100 #Set total number of episodes to train agent on.
 max_ep = 10
 update_frequency = 5
 
@@ -94,33 +102,40 @@ with tf.Session() as sess:
     i = 0
     total_reward = []
     total_lenght = []
-    prevX = 80+10
-    prevY = 80+75+50
+    coordX = 80+10
+    coordY = 80+75+50
         
     gradBuffer = sess.run(tf.trainable_variables())
     for ix,grad in enumerate(gradBuffer):
         gradBuffer[ix] = grad * 0
-        
+
+    end_rewards =0
     while i < total_episodes:
         s = env.reset()
-        #TODO SET S into something until s is not
         running_reward = 0
+        completed_click =0
+        #TODO SET S into something until s is not
         ep_history = []
-        for j in range(max_ep):
+        #loop through each clicks
+        for j in range(max_ep): 
+            completed_click+=1
+            s = manipulateState(s, coordX, coordY)
             #Choose either a random action or one from our network.
-            print "HELOOOOO", s
-            a_dist = sess.run(myAgent.output,feed_dict={myAgent.state_in:np.array([[0], [0]])})
+            a_dist = sess.run(myAgent.output,feed_dict={myAgent.state_in:np.array(s)})
             #a_dist = [[0.15,0.15,0.15,0.15,0.15,0.25]]
-            a = np.random.choice(np.arange(0,6),p=a_dist[0])
+            print "adist!" ,a_dist
+            a = np.random.choice(np.arange(0,6),p=a_dist[0])#pick from 0-6 choices and get the prbability
             print a
             #a = np.argmax(a_dist == a) #takes the highest value from the array, but why a_dist==a?
-            actionset= doAction(a, prevX, prevY)
-            print "GDJHSGD", actionset
+            actionset= doAction(a, coordX, coordY)
+            print "GDJHSGD", [actionset[0]]
             s1,r,d,_ = env.step([actionset[0]]) #Get our reward for taking an action given a bandit.
-            print "GDJHSGD", actionset
+            #print "GDJHSGD", actionset
             ep_history.append([s,a,r,s1])
             s = s1
+            print "HELOOOOO", running_reward, "R is here",r
             running_reward += r[0]
+            print "gfhgj", len(r)
             if d == True:
                 #Update the network.
                 ep_history = np.array(ep_history)
@@ -141,9 +156,12 @@ with tf.Session() as sess:
                 total_lenght.append(j)
                 break
             env.render()
-        
+        end_rewards=running_reward/completed_click
             #Update our running tally of scores.
         if i % 100 == 0:
             print np.mean(total_reward[-100:])
         i += 1
+
+cumulative_r = float(end_rewards/total_episodes)
+print "CUMULATIVE", cumulative_r
 
