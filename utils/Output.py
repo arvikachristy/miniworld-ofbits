@@ -62,8 +62,7 @@ class Output:
         self.open()
         self.addReward(episode, reward)
         if episode % self.summary_freq == 0:
-         self.addSummary(episode)
-
+            self.addSummary(episode)
         self.close()
 
 
