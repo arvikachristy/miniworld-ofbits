@@ -87,7 +87,7 @@ class DDPG:
                            
             if self.done_batch[i]:
                 self.y_i_batch.append(self.reward_batch[i])
-                print "batch complete"
+                #print "batch complete"
             #else:
                 #print "batch has not been complete yet"
                 #self.y_i_batch.append(self.reward_batch[i] + GAMMA*q_t_1[i][0])                 
