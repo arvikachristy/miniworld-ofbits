@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import scipy.misc
 import os
 
-from output import output
+from Output import Output
 from ExperienceBuffer import ExperienceBuffer
 
 # DD-DQN implementation based on Arthur Juliani's tutorial "Simple Reinforcement Learning with Tensorflow Part 4: Deep Q-Networks and Beyond"
@@ -158,6 +158,7 @@ path = "./dqn-model" #The path to save our model to.
 h_size = 512#64#1024 #The size of the final convolutional layer before splitting it into Advantage and Value streams.
 tau = 0.001 #Rate to update target network toward primary network
 plot_vision = False
+save_history = True #If true, write results to file. If false, render environment.
 
 
 env = gym.make('wob.mini.ClickTest-v0')
@@ -174,7 +175,8 @@ targetQN = QLearner(h_size)
 init = tf.global_variables_initializer()
 
 #saver = tf.train.Saver()
-f = output()
+if save_history:
+    history_writer = Output()
 
 trainables = tf.trainable_variables()
 
@@ -214,7 +216,8 @@ with tf.Session() as sess:
     s, r, d, info = env.step([[universe.spaces.PointerEvent(prevX, prevY, 0)]])
     while not isValidObservation(s):
         s, r, d, info = env.step([[universe.spaces.PointerEvent(prevX, prevY, 0)]])
-    env.render()
+    if not save_history:
+        env.render()
     episodeOffset = episodeNumber(info, i)
     print 'Offset:', episodeOffset
     while i < num_episodes:
@@ -251,7 +254,8 @@ with tf.Session() as sess:
                 s1 = s1.eval()
             while not isValidObservation(s1):
                 s1, r, d, info = env.step([a])
-            env.render()
+            if not save_history:
+                env.render()
             s1 = processState(s1, prevY, prevX)
 
             if plot_vision:
@@ -287,12 +291,11 @@ with tf.Session() as sess:
                     misses += 1
                 elif r[0] > 0:
                     successes += 1
-                rewards.append([i, r[0]])
-                if r[0] > 0:
                     print 'Success'
                 else:
                     fails += 1
-                f.newEandR(i,r[0])
+                if save_history:
+                    history_writer.saveEpisode(i,r[0])
                 rewards.append([i, r[0]])
                 rewards = rewards[-100:]
                 total_steps += j
