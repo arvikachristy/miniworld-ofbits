@@ -250,7 +250,7 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
   state = env.reset()
 
   #There are instances were the states returned are [None]. This loop will iterate until a legitimate state is returned
-  if state == [None]:
+  if np.array_equal(state, [None]):
     while state == [None]:
       state, reward, done, _ = env.step([[]])
 
@@ -258,6 +258,7 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
   state = state_proc.process(sess, (state[0])['vision'])
   # We stack to take 4 instances of states
   state = np.stack([state] * 4, axis = 2)
+  action_probs = []
 
   #The following loop is to simply fill the replay memory with transition tuples. The number of iterations is stated in the initial parameters
   for i in range(ri_dict["replay_memory_init_size"]):
@@ -266,30 +267,33 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
     print epsilons[min(total_t, ri_dict["epsilon_decay_steps"]-1)]
 
     #Update action probabilities table
-    action_probs = policy(sess, state, epsilons[min(total_t, ri_dict["epsilon_decay_steps"]-1)])
-    print action_probs
+    if np.array_equal(state, [None]) == False:
+      action_probs = policy(sess, state, epsilons[min(total_t, ri_dict["epsilon_decay_steps"]-1)])
+      print action_probs
+
     act = chooseAction(action_probs)
     action = [doAction(act)]
 
     #Take a step in the environment from the predicted action
     next_state, reward, done, _ = env.step(action)
-    if next_state == [None]:
-      while next_state == [None]:
-        next_state, reward, done, _ = env.step([[]])
-    env.render()
-    next_state = state_proc.process(sess, (next_state[0])['vision'])
-    next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
+    if np.array_equal(next_state, [None]):
+      env.render()
+    else:
+      if np.array_equal(state, [None]) == False:
+        next_state = state_proc.process(sess, (next_state[0])['vision'])
+        next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
+        env.render()
+        #Add transition to the replay memory as long as it is not the starting transition
+        if act != -1:
+          replay_memory.append(Transition(state,act,reward,next_state,done))
 
-    #Add transition to the replay memory as long as it is not the starting transition
-    if act != -1:
-      replay_memory.append(Transition(state,act,reward,next_state,done))
-    
     #Reset the environment if done
-    if done:
+    if done == [True]:
       state = env.reset()
-      if state == [None]:
+      if np.array_equal(state, [None]):
         while state == [None]:
           state, reward, done, _ = env.step([[]])
+
       env.render()
       state = state_proc.process(sess, (state[0])['vision'])
       state = np.stack([state] * 4, axis = 2)
@@ -305,7 +309,7 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
 
     #Reset the environment
     state = env.reset()
-    if state == [None]:
+    if np.array_equal(state, [None]):
       while state == [None]:
         state, reward, done, _ = env.step([[]])
     env.render()
@@ -328,42 +332,44 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
       sys.stdout.flush()
 
       #Take a step
-      action_probs = policy(sess, state, epsilon)
-      print action_probs
+      if np.array_equal(state, [None]) == False:
+        action_probs = policy(sess, state, epsilon)
+        print action_probs
+
       act = chooseAction(action_probs)
       action = [doAction(act)]
       next_state, reward, done, _ = env.step(action)
-      if next_state == [None]:
-        while next_state == [None]:
-          next_state, reward, done, _ = env.step([[]])
-      env.render()
-      next_state = state_proc.process(sess, (next_state[0])['vision'])
-      next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
 
-      #If our replay memory is full, pop the first element
-      if len(replay_memory) == ri_dict["replay_memory_size"]:
-        replay_memory.pop(0)
+      if np.array_equal(next_state, [None]):
+        env.render()
+      else:
+        if np.array_equal(state, [None]) == False:
+          env.render()
+          next_state = state_proc.process(sess, (next_state[0])['vision'])
+          next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
+          #If our replay memory is full, pop the first element
+          if len(replay_memory) == ri_dict["replay_memory_size"]:
+            replay_memory.pop(0)
+          #Save transition to replay memory
+          if act != -1:
+            replay_memory.append(Transition(state,act,reward,next_state,done))
 
-      #Save transition to replay memory
-      if act != -1:
-        replay_memory.append(Transition(state,act,reward,next_state,done))
+            #Sample a minibatch from the replay memory
+            samples = random.sample(replay_memory, ri_dict["batch_size"])
+            states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
 
-      #Sample a minibatch from the replay memory
-      samples = random.sample(replay_memory, ri_dict["batch_size"])
-      states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
+            #Calculate the q values and targets
+            q_values_next = qnetwork.predict(sess, next_states_batch)
+            best_actions = np.argmax(q_values_next, axis = 1)
+            q_values_next_target = targetNetwork.predict(sess, next_states_batch)
+            targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * ri_dict["discount_factor"] * q_values_next_target[np.arange(ri_dict["batch_size"]), best_actions]
 
-      #Calculate the q values and targets
-      q_values_next = qnetwork.predict(sess, next_states_batch)
-      best_actions = np.argmax(q_values_next, axis = 1)
-      q_values_next_target = targetNetwork.predict(sess, next_states_batch)
-      targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * ri_dict["discount_factor"] * q_values_next_target[np.arange(ri_dict["batch_size"]), best_actions]
+            #Perform gradient descent update
+            states_batch = np.array(states_batch)
+            loss = qnetwork.update(sess, states_batch, action_batch, targets_batch)
 
-      #Perform gradient descent update
-      states_batch = np.array(states_batch)
-      loss = qnetwork.update(sess, states_batch, action_batch, targets_batch)
-
-      if done[0] == True:
-        break
+            if done == [True]:
+              break
 
       state = next_state
       total_t += 1
