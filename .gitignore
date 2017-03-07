@@ -1,3 +1,4 @@
 *.pyc
 *evaluation
+*dqn-model
 deepq\ \(raj\)/checkpoints

@@ -15,9 +15,7 @@ from ExperienceBuffer import ExperienceBuffer
 class QLearner():
   def __init__(self, h_size):
     self.num_actions = 6
-    # 8064 = 42 * 64 * 3
-    #self.scalarInput = tf.placeholder(shape=[None, 8064], dtype=tf.float32)#84, 32, 3], dtype = tf.float32)
-    self.imageIn = tf.placeholder(shape=[None, 84, 32, 3], dtype=tf.float32)#tf.reshape(self.scalarInput, shape=[-1, 84, 32, 3])
+    self.imageIn = tf.placeholder(shape=[None, 84, 32, 3], dtype=tf.float32)
 
     self.conv1 = tf.contrib.layers.convolution2d( \
         inputs=self.imageIn,num_outputs=32,kernel_size=[5,5],stride=[3,2],padding='VALID', biases_initializer=None)
@@ -43,7 +41,7 @@ class QLearner():
       tf.reduce_mean(self.Advantage, reduction_indices=1, keep_dims=True))
     self.predict = tf.argmax(self.QOut, 1)
 
-    #Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
+    # Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
     self.targetQ = tf.placeholder(shape=[None],dtype=tf.float32)
 
     self.actions = tf.placeholder(shape=[None],dtype=tf.int32)
@@ -62,7 +60,7 @@ def processState(s, cursorY, cursorX):
             v = s[0]['vision']
             crop = v[75:75+210, 10:10+160, :]
 
-            #divide by 5
+            # divide by 5
             lowres = scipy.misc.imresize(crop, (42, 32, 3))
             lowresT = tf.pack(lowres)
 
@@ -144,21 +142,24 @@ def isValidObservation(s):
     return s is not None and len(s) > 0 and s[0] is not None and type(s[0]) == dict and 'vision' in s[0]
 
 
-batch_size = 1 #How many experiences to use for each training step.
-update_freq = 10 #How often to perform a training step.
-y = .99 #Discount factor on the target Q-values
-startE = 1 #Starting chance of random action
-endE = 0.1 #Final chance of random action
-anneling_steps = 30000. #How many steps of training to reduce startE to endE.
-num_episodes = 7000 #How many episodes of game environment to train network with.
-pre_train_steps = 500 #How many steps of random actions before training begins.
-#max_epLength = 5000 #The max allowed length of our episode.
-load_model = False #Whether to load a saved model.
-path = "./dqn-model" #The path to save our model to.
-h_size = 512#64#1024 #The size of the final convolutional layer before splitting it into Advantage and Value streams.
-tau = 0.001 #Rate to update target network toward primary network
-plot_vision = False
-save_history = True #If true, write results to file. If false, render environment.
+batch_size = 32 # How many experiences to use for each training step.
+update_freq = 4 # How often to perform a training step.
+y = .99 # Discount factor on the target Q-values
+startE = 1 # Starting chance of random action
+endE = 0.1 # Final chance of random action
+anneling_steps = 30000. # How many steps of training to reduce startE to endE.
+num_episodes = 7000 # How many episodes of game environment to train network with.
+pre_train_steps = 500 # How many steps of random actions before training begins.
+h_size = 512 # The size of the final convolutional layer before splitting it into Advantage and Value streams.
+tau = 0.001 # Rate to update target network toward primary network
+
+load_model = False # Whether to load a saved model.
+path = "./dqn-model" # The path to save our model to.
+plot_vision = False # Plot the agent's view of the environment
+save_history = True # If true, write results to file. If false, render environment.
+summary_print_freq = 10 # How often (in episodes) to print a summary
+summary_freq = 20 # How often (in episodes) to write a summary to a summary file
+checkpoint_freq = 100 # How often (in episodes) to save a checkpoint of model parameters
 
 
 env = gym.make('wob.mini.ClickTest-v0')
@@ -174,12 +175,18 @@ targetQN = QLearner(h_size)
 
 init = tf.global_variables_initializer()
 
-#saver = tf.train.Saver()
+# Periodically saves snapshots of the trained CNN weights
+# Also responsible for restoring model from checkpoint file
+saver = tf.train.Saver()
+
 if save_history:
-    history_writer = Output()
+    # Records the agent's performance (e.g. avg reward)
+    history_writer = Output(summary_freq=summary_freq)
+    #Make a path for our model to be saved in.
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 trainables = tf.trainable_variables()
-
 targetOps = updateTargetGraph(trainables,tau)
 
 myBuffer = ExperienceBuffer()
@@ -198,12 +205,8 @@ successes = 0
 fails = 0
 misses = 0
 
-#Make a path for our model to be saved in.
-#if not os.path.exists(path):
-#    os.makedirs(path)
-
 with tf.Session() as sess:
-    if load_model == True:
+    if load_model:
         print 'Loading Model...'
         ckpt = tf.train.get_checkpoint_state(path)
         saver.restore(sess,ckpt.model_checkpoint_path)
@@ -307,11 +310,11 @@ with tf.Session() as sess:
         jList.append(j)
         rList.append(rAll)
 
-        #TODO: Periodically save the model.
-        #if i % 500 == 0:
-        #    saver.save(sess,path+'/model', global_step=i)#+'.cptk')
-        #    print "Saved Model"
-        if i % 10 == 0:
+        #Periodically save the model.
+        if save_history and i % checkpoint_freq == 0:
+            saver.save(sess,path+'/model', global_step=i)#+'.cptk')
+            print "Saved Model"
+        if i % summary_print_freq == 0:
             print 'Actions taken', np.sum(jList)
             print 'Average reward (last 100):', np.mean(rList[-100:]), '(last 10)', np.mean(rList[-10:])
             print 'Epsilon:', e
@@ -320,5 +323,6 @@ with tf.Session() as sess:
             'Misses:', misses, ':', float(misses)/len(rList), '\t' \
             'avg steps/episode (last 100):', np.mean(jList[-100:]), '(last 10)', np.mean(jList[-10:])
             print 'Rewards', rewards
-    #saver.save(sess,path+'/model-'+str(i)+'.cptk')
-print "Percent of succesful episodes: " + str(sum(rList)/num_episodes) + "%"
+    if save_history:
+        saver.save(sess,path+'/model-'+str(i)+'.cptk')
+print "Average reward: ", np.mean(rList)
