@@ -1,4 +1,3 @@
 ### How to run
 
-`cd ..`  
-`python -m dd-dqn.dd-dqn-agent`
+Run `python -m dd-dqn.dd-dqn-agent` in directory miniworld-ofbits/
