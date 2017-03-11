@@ -2,8 +2,8 @@ import gym
 import universe
 import numpy as np
 import tensorflow as tf
+import scipy.misc
 import tensorflow.contrib.slim as slim
-<<<<<<< HEAD
 import matplotlib.pyplot as plt
 
 env = gym.make('wob.mini.ClickTest-v0')
@@ -54,9 +54,14 @@ class agent():
 
 tf.reset_default_graph() #Clear the Tensorflow graph.
 
+#make continous action for distance
+def distanceCont():
+    step = np.random.choice(np.arange(10, max_pixel))
+    return step
+
 
 def doAction(a, x, y):
-    small_step = 25
+    small_step = 10
     minY = 125
     maxY = 285
     minX = 10  
@@ -81,18 +86,40 @@ def doAction(a, x, y):
             return [universe.spaces.PointerEvent(x - small_step, y, 0)], x - small_step, y
     return [], x, y
 
+def focusAtCursor(imageIn, cursorY, cursorX, windowY, windowX):
+    cursorX = cursorX - 10
+    cursorY = cursorY - 75
+    imageIn = tf.reshape(imageIn, shape=[-1, 210, 160, 3])
+    padded = tf.pad(tf.reshape(imageIn[0,:,:,:], shape=[210, 160, 3]),
+                    [[windowY/2, windowY/2],[windowX/2, windowX/2],[0, 0]],
+                    "CONSTANT")
+    result = padded[cursorY:cursorY+windowY, cursorX:cursorX+windowX, :]
+    return result
+
 def manipulateState(s, coordX,coordY):
     if s is not None and s[0] is not None:
-        vi = s[0]['vision']
-        print vi.shape
+        if type(s[0]) == dict and 'vision' in s[0]:
+            vi = s[0]['vision']
+            crop = vi[75:75+210, 10:10+160, :]
 
-    return [[0], [0]]
+            # divide by 5
+            lowres = scipy.misc.imresize(crop, (42, 32, 3))
+            lowresT = tf.pack(lowres)
 
-myAgent = agent(lr=1e-2,s_size=1,a_size=6,h_size=8) #Load the agent.
+            windowX = 32
+            windowY = 42
+            center = focusAtCursor(crop, coordY, coordX, windowY, windowX)
 
-total_episodes = 100 #Set total number of episodes to train agent on.
+            stacked = tf.stack([center, lowresT], axis=0)
+            print tf.reshape(stacked, shape=[1, -1]).eval(), "HOLO"
+            return tf.reshape(stacked, shape=[1, -1]).eval()
+    return np.zeros((1,8064))
+
+myAgent = agent(lr=1e-2,s_size=84*32*3,a_size=6,h_size=8) #Load the agent.
+#s_sze is expecting one input coz its a flat vector (array), sp
+total_episodes = 10 #Set total number of episodes to train agent on.
 max_ep = 10
-update_frequency = 5
+update_frequency = 1
 
 init = tf.global_variables_initializer()
 
@@ -102,7 +129,11 @@ with tf.Session() as sess:
     i = 0
     total_reward = []
     total_lenght = []
-    coordX = 80+10
+    print_cur_reward = []
+    print_tot_reward = []
+
+    #starting cursor in the middle of the frame
+    coordX = 80+10 
     coordY = 80+75+50
         
     gradBuffer = sess.run(tf.trainable_variables())
@@ -123,18 +154,25 @@ with tf.Session() as sess:
             #Choose either a random action or one from our network.
             a_dist = sess.run(myAgent.output,feed_dict={myAgent.state_in:np.array(s)})
             #a_dist = [[0.15,0.15,0.15,0.15,0.15,0.25]]
+            a_dist = 0.5 * (a_dist + np.ones((1, 6)) / 6)
             print "adist!" ,a_dist
-            a = np.random.choice(np.arange(0,6),p=a_dist[0])#pick from 0-6 choices and get the prbability
+            #pick from 0-6 choices and get the probability
+            a = np.random.choice(np.arange(0,6),p=a_dist[0])
             print a
             #a = np.argmax(a_dist == a) #takes the highest value from the array, but why a_dist==a?
             actionset= doAction(a, coordX, coordY)
-            print "GDJHSGD", [actionset[0]]
+            print "GDJHSGD", actionset
             s1,r,d,_ = env.step([actionset[0]]) #Get our reward for taking an action given a bandit.
             #print "GDJHSGD", actionset
             ep_history.append([s,a,r,s1])
             s = s1
-            print "HELOOOOO", running_reward, "R is here",r
+            
             running_reward += r[0]
+            print "Total Cumulative Reward now:", running_reward, "R is here",r[0]
+
+            print_cur_reward.append(r[0])
+            print "Reward each click:", print_cur_reward
+
             print "gfhgj", len(r)
             if d == True:
                 #Update the network.
@@ -157,11 +195,14 @@ with tf.Session() as sess:
                 break
             env.render()
         end_rewards=running_reward/completed_click
+        print (running_reward/float(10)), "heyo"
+        print_tot_reward.append(running_reward/float(10))
             #Update our running tally of scores.
         if i % 100 == 0:
             print np.mean(total_reward[-100:])
         i += 1
-
+print "Print Average per 10 click:", print_tot_reward       
+print "last, Reward Each click:", print_cur_reward        
 cumulative_r = float(end_rewards/total_episodes)
 print "CUMULATIVE", cumulative_r
 
