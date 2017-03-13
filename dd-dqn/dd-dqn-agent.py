@@ -43,9 +43,9 @@ class QLearner():
     self.predict = tf.argmax(self.QOut, 1)
 
     # Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
-    self.targetQ = tf.placeholder(shape=[None],dtype=tf.float32)
+    self.targetQ = tf.placeholder(shape=[None], dtype=tf.float32)
 
-    self.actions = tf.placeholder(shape=[None],dtype=tf.int32)
+    self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
     self.actions_onehot = tf.one_hot(self.actions, self.num_actions, dtype=tf.float32)
     
     self.Q = tf.reduce_sum(tf.multiply(self.QOut, self.actions_onehot), reduction_indices=1)
@@ -73,14 +73,14 @@ def processState(s, cursorY, cursorX):
             return tf.reshape(stacked, shape=[84, 32, 3]).eval()
     return np.zeros(shape=[84, 32, 3])
 
-def updateTargetGraph(tfVars,tau):
+def updateTargetGraph(tfVars, tau):
     total_vars = len(tfVars)
     op_holder = []
     for idx,var in enumerate(tfVars[0:total_vars/2]):
         op_holder.append(tfVars[idx+total_vars/2].assign((var.value()*tau) + ((1-tau)*tfVars[idx+total_vars/2].value())))
     return op_holder
 
-def updateTarget(op_holder,sess):
+def updateTarget(op_holder, sess):
     for op in op_holder:
         sess.run(op)
 
@@ -110,7 +110,7 @@ def intToVNCAction(a, x, y):
             return [universe.spaces.PointerEvent(x - small_step, y, 0)], x - small_step, y
     return [], x, y
 
-def episodeNumber(info, prev):
+def getEpisodeNumber(info, prev):
     if info['n'][0]['env_status.episode_id'] is not None:
         return int(info['n'][0]['env_status.episode_id'])
     else:
@@ -142,12 +142,105 @@ def chooseActionFromQOut(QOut):
 def isValidObservation(s):
     return s is not None and len(s) > 0 and s[0] is not None and type(s[0]) == dict and 'vision' in s[0]
 
+def getValidObservation(env, prevX, prevY):
+    s = None
+    while not isValidObservation(s):
+        s, r, d, info = env.step([[universe.spaces.PointerEvent(prevX, prevY, 0)]])
+    s = processState(s, prevY, prevX)
+    return s
+
+def makeEnvironment():
+    env = gym.make('wob.mini.ClickTest-v0')
+    # automatically creates a local docker container
+    env.configure(remotes=1, fps=5,
+                  vnc_driver='go',
+                  vnc_kwargs={'encoding': 'tight', 'compress_level': 0,
+                              'fine_quality_level': 100, 'subsample_level': 0})
+    return env
+
+def initEnvironment(env, save_history):
+    s = env.reset()
+    prevY = 80+75+50
+    prevX = 80+10
+    s, r, d, info = env.step([[universe.spaces.PointerEvent(prevX, prevY, 0)]])
+    while not isValidObservation(s):
+        s, r, d, info = env.step([[universe.spaces.PointerEvent(prevX, prevY, 0)]])
+    if not save_history:
+        env.render()
+    ep_num_offset = getEpisodeNumber(info, 0)
+    print 'Offset:', ep_num_offset
+    return s, info, prevY, prevX, ep_num_offset
+
+def epNumIsConstant(info, ep_num, ep_num_offset):
+    return getEpisodeNumber(info, ep_num + ep_num_offset) == ep_num + ep_num_offset
+
+def addReward(r, ep_num, rewards, successes, fails, misses):
+    if r == 0:
+        misses += 1
+    elif r > 0:
+        successes += 1
+        print 'Success'
+    else:
+        fails += 1
+    rewards.append([ep_num, r])
+    rewards = rewards[-100:]
+    return rewards, successes, fails, misses
+
+def discountEpsilon(epsilon, step_drop, end_epsilon):
+    if epsilon > end_epsilon:
+        epsilon -= step_drop
+
+def trainQNs(mainQN, targetQN, trainBatch, batch_size, sess, y):
+    QOut1 = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:np.stack(trainBatch[:,3])})
+    Q1 = chooseActionFromQOut(QOut1)
+    Q2 = sess.run(targetQN.QOut,feed_dict={targetQN.imageIn:np.stack(trainBatch[:,3])})
+    end_multiplier = -(trainBatch[:,4] - 1)
+    doubleQ = Q2[range(batch_size),Q1]
+    targetQ = trainBatch[:,2] + (y*doubleQ * end_multiplier)
+    # Update the network with our target values.
+    _ = sess.run(mainQN.updateModel, \
+        feed_dict={mainQN.imageIn:np.stack(trainBatch[:,0]),
+            mainQN.targetQ:targetQ,
+            mainQN.actions:trainBatch[:,1]})
+
+def printSummary(stepList, rList, e, rewards, successes, fails, misses):
+    print 'Actions taken', np.sum(stepList)
+    print 'Average reward (last 100):', np.mean(rList[-100:]), '(last 10)', np.mean(rList[-10:])
+    print 'Epsilon:', e
+    print 'Successes:', successes, ':', float(successes)/len(rList), '\t', \
+    'Fails:', fails, ':', float(fails)/len(rList), '\t', \
+    'Misses:', misses, ':', float(misses)/len(rList), '\t' \
+    'avg steps/episode (last 100):', np.mean(stepList[-100:]), '(last 10)', np.mean(stepList[-10:])
+    print 'Rewards', rewards
+
+def getOutputDirNames():
+    checkpoint_path_suffix = "dqn-model"
+    checkpoint_path = checkpoint_path_suffix # The path to save our model to.
+    evaluation_path_suffix = "evaluation"
+    evaluation_path = evaluation_path_suffix
+    # Add ID to output directory names to distinguish between runs
+    if len(sys.argv) > 1:
+        agent_id = str(sys.argv[1])
+        checkpoint_path = agent_id + "-" + checkpoint_path_suffix
+        evaluation_path = agent_id + "-" + evaluation_path_suffix
+    return checkpoint_path, evaluation_path
+
+def loadModel(saver, checkpoint_path, sess):
+    print 'Loading Model...'
+    ckpt = tf.train.get_checkpoint_state(checkpoint_path)
+    saver.restore(sess, ckpt.model_checkpoint_path)
+
+def plotVision(s):
+    plt.close()
+    plt.imshow(s)
+    plt.show(block=False)
+
 
 batch_size = 32 # How many experiences to use for each training step.
 update_freq = 4 # How often to perform a training step.
 y = .99 # Discount factor on the target Q-values
-startE = 1 # Starting chance of random action
-endE = 0.1 # Final chance of random action
+start_epsilon = 1 # Starting chance of random action
+end_epsilon = 0.1 # Final chance of random action
 anneling_steps = 30000. # How many steps of training to reduce startE to endE.
 num_episodes = 7000 # How many episodes of game environment to train network with.
 pre_train_steps = 500 # How many steps of random actions before training begins.
@@ -155,29 +248,15 @@ h_size = 512 # The size of the final convolutional layer before splitting it int
 tau = 0.001 # Rate to update target network toward primary network
 
 load_model = False # Whether to load a saved model.
-checkpoint_path_suffix = "dqn-model"
-checkpoint_path = checkpoint_path_suffix # The path to save our model to.
-evaluation_path_suffix = "evaluation"
-evaluation_path = evaluation_path_suffix
+checkpoint_path, evaluation_path = getOutputDirNames()
 plot_vision = False # Plot the agent's view of the environment
 save_history = True # If true, write results to file. If false, render environment.
 summary_print_freq = 10 # How often (in episodes) to print a summary
 summary_freq = 20 # How often (in episodes) to write a summary to a summary file
 checkpoint_freq = 100 # How often (in episodes) to save a checkpoint of model parameters
 
-# Add ID to output directory names to distinguish between runs
-if len(sys.argv) > 1:
-    agent_id = str(sys.argv[1])
-    checkpoint_path = agent_id + "-" + checkpoint_path_suffix
-    evaluation_path = agent_id + "-" + evaluation_path_suffix
 
-
-env = gym.make('wob.mini.ClickTest-v0')
-# automatically creates a local docker container
-env.configure(remotes=1, fps=5,
-              vnc_driver='go',
-              vnc_kwargs={'encoding': 'tight', 'compress_level': 0,
-                          'fine_quality_level': 100, 'subsample_level': 0})
+env = makeEnvironment()
 
 tf.reset_default_graph()
 mainQN = QLearner(h_size)
@@ -203,11 +282,11 @@ myBuffer = ExperienceBuffer()
 rewards = []
 
 #Set the rate of random action decrease. 
-e = startE
-stepDrop = (startE - endE)/anneling_steps
+epsilon = start_epsilon
+step_drop = (start_epsilon - end_epsilon)/anneling_steps
 
 #create lists to contain total rewards and steps per episode
-jList = []
+stepList = []
 rList = []
 total_steps = 0
 
@@ -217,48 +296,35 @@ misses = 0
 
 with tf.Session() as sess:
     if load_model:
-        print 'Loading Model...'
-        ckpt = tf.train.get_checkpoint_state(checkpoint_path)
-        saver.restore(sess, ckpt.model_checkpoint_path)
+        loadModel(saver, checkpoint_path, sess)
     sess.run(init)
     updateTarget(targetOps, sess) #Set the target network to be equal to the primary network.
-    i = 0
-    s = env.reset()
-    prevY = 80+75+50
-    prevX = 80+10
-    s, r, d, info = env.step([[universe.spaces.PointerEvent(prevX, prevY, 0)]])
-    while not isValidObservation(s):
-        s, r, d, info = env.step([[universe.spaces.PointerEvent(prevX, prevY, 0)]])
-    if not save_history:
-        env.render()
-    episodeOffset = episodeNumber(info, i)
-    print 'Offset:', episodeOffset
-    while i < num_episodes:
+    ep_num = 0
+    # Center cursor and wait until state observation s is valid
+    s, info, prevY, prevX, ep_num_offset = initEnvironment(env, save_history)
+
+    while ep_num < num_episodes:
         episodeBuffer = ExperienceBuffer()
 
-        if type(s) == tf.Tensor:
-            s = s.eval()
-        while not isValidObservation(s):
-            s, r, d, info = env.step([[universe.spaces.PointerEvent(prevX, prevY, 0)]])
-        s = processState(s, prevY, prevX)
+        s = getValidObservation(env, prevX, prevY)
         s1 = s
         d = False
         rAll = 0
-        j = 0
-        i = episodeNumber(info, i + episodeOffset) - episodeOffset
-        print '\n------ Episode', i
+        step_num = 0
+        ep_num = getEpisodeNumber(info, ep_num + ep_num_offset) - ep_num_offset
+        print '\n------ Episode', ep_num
         print (prevX, prevY)
         #The Q-Network
-        while episodeNumber(info, i + episodeOffset) == i + episodeOffset:
-            j+=1
+        while epNumIsConstant(info, ep_num, ep_num_offset):
+            step_num += 1
             #Choose an action by greedily (with e chance of random action) from the Q-network
-            if np.random.rand(1) < e or total_steps < pre_train_steps:
+            if np.random.rand(1) < epsilon or total_steps < pre_train_steps:
                 a_num = np.random.randint(0,6)
             else:
                 QOut = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:[s]})[0]
                 print QOut
                 a_num = chooseActionFromQOut(QOut)
-                print j, 'Decided',
+                print step_num, 'Decided',
                 action_numbers = {0: 'CLICK', 1: 'STAY', 2: 'UP', 3: 'RIGHT', 4: 'DOWN', 5: 'LEFT'}
                 print action_numbers[a_num]
             a, prevX, prevY = intToVNCAction(a_num, prevX, prevY)
@@ -272,67 +338,38 @@ with tf.Session() as sess:
             s1 = processState(s1, prevY, prevX)
 
             if plot_vision:
-                plt.close()
-                plt.imshow(s1)
-                plt.show(block=False)
+                plotVision(s1)
             episodeBuffer.add(np.reshape(np.array([s,a_num,r[0],s1,d[0]]),[1,5])) #Save the experience to our episode buffer.
             
             if total_steps > pre_train_steps:
-                if e > endE:
-                    e -= stepDrop
+                epsilon = discountEpsilon(epsilon, step_drop, end_epsilon)
                 
                 if total_steps % (update_freq) == 0:
                     trainBatch = myBuffer.sample(batch_size) #Get a random batch of experiences.
                     #Below we perform the Double-DQN update to the target Q-values
-                    QOut1 = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:np.stack(trainBatch[:,3])})
-                    Q1 = chooseActionFromQOut(QOut1)
-                    Q2 = sess.run(targetQN.QOut,feed_dict={targetQN.imageIn:np.stack(trainBatch[:,3])})
-                    end_multiplier = -(trainBatch[:,4] - 1)
-                    doubleQ = Q2[range(batch_size),Q1]
-                    targetQ = trainBatch[:,2] + (y*doubleQ * end_multiplier)
-                    #Update the network with our target values.
-                    _ = sess.run(mainQN.updateModel, \
-                        feed_dict={mainQN.imageIn:np.stack(trainBatch[:,0]),
-                            mainQN.targetQ:targetQ,
-                            mainQN.actions:trainBatch[:,1]})
-                    
+                    trainQNs(mainQN, targetQN, trainBatch, batch_size, y)
                     updateTarget(targetOps,sess) #Set the target network to be equal to the primary network.
             rAll += r[0]
             
             if d[0] == True:
-                if r[0] == 0:
-                    misses += 1
-                elif r[0] > 0:
-                    successes += 1
-                    print 'Success'
-                else:
-                    fails += 1
+                rewards, successes, fails, misses = addReward(r[0], ep_num, rewards, successes, fails, misses)
                 if save_history:
-                    history_writer.saveEpisode(i,r[0])
-                rewards.append([i, r[0]])
-                rewards = rewards[-100:]
-                total_steps += j
-                print 'Steps taken this episode:', j
+                    history_writer.saveEpisode(ep_num, r[0])
+                total_steps += step_num
+                print 'Steps taken this episode:', step_num
             s = s1
         
         #Get all experiences from this episode and discount their rewards.
         myBuffer.add(episodeBuffer.buffer)
-        jList.append(j)
+        stepList.append(step_num)
         rList.append(rAll)
 
         #Periodically save the model.
-        if save_history and i % checkpoint_freq == 0:
-            saver.save(sess, checkpoint_path+'/model', global_step=i)#+'.cptk')
+        if save_history and ep_num % checkpoint_freq == 0:
+            saver.save(sess, checkpoint_path+'/model', global_step=ep_num)#+'.cptk')
             print "Saved Model"
-        if i % summary_print_freq == 0:
-            print 'Actions taken', np.sum(jList)
-            print 'Average reward (last 100):', np.mean(rList[-100:]), '(last 10)', np.mean(rList[-10:])
-            print 'Epsilon:', e
-            print 'Successes:', successes, ':', float(successes)/len(rList), '\t', \
-            'Fails:', fails, ':', float(fails)/len(rList), '\t', \
-            'Misses:', misses, ':', float(misses)/len(rList), '\t' \
-            'avg steps/episode (last 100):', np.mean(jList[-100:]), '(last 10)', np.mean(jList[-10:])
-            print 'Rewards', rewards
+        if ep_num % summary_print_freq == 0:
+            printSummary(stepList, rList, epsilon, rewards, successes, fails, misses)
     if save_history:
-        saver.save(sess, checkpoint_path+'/model-'+str(i)+'.cptk')
+        saver.save(sess, checkpoint_path+'/model-'+str(ep_num)+'.cptk')
 print "Average reward: ", np.mean(rList)
