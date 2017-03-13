@@ -53,10 +53,10 @@ if summaries_dir:  #If you have specified a directory for 'summaries_dir'
 
 	#Here's an example using I used in my code :
 	episode_summary = tf.Summary()
-    episode_summary.value.add(simple_value = stats.episode_rewards[i], node_name = "episode_reward", tag = "episode_reward") #Plots episode reward against time steps
-    episode_summary.value.add(simple_value = stats.episode_lengths[i], node_name = "episode_lengths", tag = "episode_lengths") #Plots episode length against time steps 
-    qnetwork.summary_writer.add_summary(episode_summary, total_t) #total_t is the current total time step at the point of writing these summaries
-    qnetwork.summary_writer.flush()
+    	episode_summary.value.add(simple_value = stats.episode_rewards[i], node_name = "episode_reward", tag = "episode_reward") #Plots episode reward against time steps
+    	episode_summary.value.add(simple_value = stats.episode_lengths[i], node_name = "episode_lengths", tag = "episode_lengths") #Plots episode length against time steps 
+    	qnetwork.summary_writer.add_summary(episode_summary, total_t) #total_t is the current total time step at the point of writing these summaries
+    	qnetwork.summary_writer.flush()
 
 #3. Once you have your variables ready, run your agent, and then run this line on your terminal :
 
