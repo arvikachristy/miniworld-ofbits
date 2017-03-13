@@ -7,19 +7,23 @@ import tensorflow as tf
 import numpy as np
 import random
 
+if "../" not in sys.path:
+  sys.path.append("../")
+
+from lib import plotting
 from collections import deque, namedtuple
 
 # Global dictionary with set parameters for the Deep-Q Network
 ri_dict = {
   "num_Episodes" : 10000,
   'num_Actions' : 5,
-  'replay_memory_size' : 5000,
-  'replay_memory_init_size' : 500,
+  'replay_memory_size' : 50000,
+  'replay_memory_init_size' : 1000,
   'update_target_estimator_every' : 1000,
   'discount_factor' : 0.99,
   'epsilon_start' : 1.0,
   'epsilon_end': 0.1,
-  'epsilon_decay_steps': 5000,
+  'epsilon_decay_steps': 10000,
   'batch_size' : 32,
   'startState' : 1
 }
@@ -57,10 +61,17 @@ class prepState():
 
 #The Q Network class
 class qNetwork():
-  def __init__(self, scope = "estimator"):
+  def __init__(self, scope = "estimator", summaries_dir = None):
     self.scope = scope
+    #Write Tensorboard Summaries to disk
+    self.summary_writer = None
     with tf.variable_scope(scope):
       self._build_model()
+      if summaries_dir:
+        summaries_dir = os.path.join(summaries_dir, "summaries_{}".format(scope))
+        if not os.path.exists(summaries_dir):
+          os.makedirs(summaries_dir)
+        self.summary_writer = tf.summary.FileWriter(summaries_dir)
 
   def _build_model(self):
     #Placeholders for the input
@@ -97,6 +108,11 @@ class qNetwork():
     self.optimizer = tf.train.RMSPropOptimizer(0.00025, 0.99, 0.0, 1e-6)
     self.train_op = self.optimizer.minimize(self.loss, global_step=tf.contrib.framework.get_global_step())
 
+    self.summaries = tf.summary.merge([
+      tf.summary.scalar("loss",self.loss),
+      tf.summary.histogram("loss_hist",self.losses),
+      tf.summary.histogram("q_values_hist",self.predictions),
+      tf.summary.scalar("max_q_value",tf.reduce_max(self.predictions))])
   def predict(self, sess, s):
     # Predicts action values for a given state 's' #
     return sess.run(self.predictions, {self.X_pl : s})
@@ -110,7 +126,9 @@ class qNetwork():
     # We remove the last dimension from 'y' as it is essentially a duplicate
     y = y[:, 0]
     feed_dict = {self.X_pl: s, self.y_pl: y, self.actions_pl: a}
-    global_step, _, loss = sess.run([tf.contrib.framework.get_global_step(), self.train_op, self.loss], feed_dict)
+    summaries, global_step, _, loss = sess.run([self.summaries, tf.contrib.framework.get_global_step(), self.train_op, self.loss], feed_dict)
+    if self.summary_writer:
+      self.summary_writer.add_summary(summaries, global_step)
     return loss
 
 def copy_model_parameters(sess, estimator1, estimator2):
@@ -199,6 +217,9 @@ def doAction(act_num):
       # 1. move to x,y with left button released, and click there (2. and 3.)
     action = [universe.spaces.PointerEvent(cord_dict["xCord"].eval(), cord_dict["yCord"].eval(),0)]
     return action
+  elif act_num == -2:
+    action = [universe.spaces.PointerEvent(cord_dict["xCord"].eval(), cord_dict["yCord"].eval(),0)]
+    return action
   elif act_num == 0:
     action = [universe.spaces.PointerEvent(cord_dict["xCord"].eval(), cord_dict["yCord"].eval(),1),
               universe.spaces.PointerEvent(cord_dict["xCord"].eval(), cord_dict["yCord"].eval(),0)]
@@ -215,11 +236,12 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
   #The replay memory is initialized
   replay_memory = []
 
+  #Keep track of useful statistics 
+  stats = plotting.EpisodeStats(episode_lengths = np.zeros(ri_dict['num_Episodes']),episode_rewards = np.zeros(ri_dict['num_Episodes']))
+
   #Create directories for checkpoints
   checkpoint_dir = os.path.join(experiment_dir, "checkpoints")
   checkpoint_path = os.path.join(checkpoint_dir, "model")
-
-  #This is not in use yet
   monitor_path = os.path.join(experiment_dir, "monitor") 
 
   if not os.path.exists(checkpoint_dir):
@@ -262,65 +284,63 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
 
   #The following loop is to simply fill the replay memory with transition tuples. The number of iterations is stated in the initial parameters
   for i in range(ri_dict["replay_memory_init_size"]):
-    print "Still in replay memory initialization <---------------------------------------------------------------------------------------"
     print i 
     print epsilons[min(total_t, ri_dict["epsilon_decay_steps"]-1)]
 
     #Update action probabilities table
-    if np.array_equal(state, [None]) == False:
-      action_probs = policy(sess, state, epsilons[min(total_t, ri_dict["epsilon_decay_steps"]-1)])
-      print action_probs
-
+    action_probs = policy(sess, state, epsilons[min(total_t, ri_dict["epsilon_decay_steps"]-1)])
+    print action_probs
     act = chooseAction(action_probs)
     action = [doAction(act)]
 
     #Take a step in the environment from the predicted action
     next_state, reward, done, _ = env.step(action)
     if np.array_equal(next_state, [None]):
+      #The environment is resetting (likely time is up and is done)
+      print "Done and resetting environment"
+      while np.array_equal(next_state, [None]):
+        next_state, reward, done, _ = env.step([doAction(-2)])
+      next_state = state_proc.process(sess, (next_state[0])['vision'])
+      next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
       env.render()
-    else:
-      if np.array_equal(state, [None]) == False:
-        next_state = state_proc.process(sess, (next_state[0])['vision'])
-        next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
-        env.render()
-        #Add transition to the replay memory as long as it is not the starting transition
-        if act != -1:
-          replay_memory.append(Transition(state,act,reward,next_state,done))
-
-    #Reset the environment if done
-    if done == [True]:
-      state = env.reset()
-      if np.array_equal(state, [None]):
-        while state == [None]:
-          state, reward, done, _ = env.step([[]])
-
-      env.render()
-      state = state_proc.process(sess, (state[0])['vision'])
-      state = np.stack([state] * 4, axis = 2)
-    else:
+      #We do not add this to the replay memory as this is a reset
       state = next_state
+    else:
+      next_state = state_proc.process(sess, (next_state[0])['vision'])
+      next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
       env.render()
+      #Add transition to the replay memory as long as it is not the starting transition
+      if act != -1:
+        replay_memory.append(Transition(state,act,reward,next_state,done))
+      state = next_state
+
+  #Reset the environment
+  state = env.reset()
+  if np.array_equal(state, [None]):
+    while state == [None]:
+      state, reward, done, _ = env.step([[]])
+  env.render()
+  state = state_proc.process(sess, (state[0])['vision'])
+  state = np.stack([state] * 4, axis = 2)
 
   #Once replay memory initialization is completed, run the training process
   for i in range(ri_dict["num_Episodes"]):
     print "Running training steps <---------------------------------------------------------------------------------------"
     #Save the current checkpoint
-    saver.save(tf.get_default_session(), checkpoint_path)
+    if i % 10 == 0:
+      saver.save(tf.get_default_session(), checkpoint_path)
 
-    #Reset the environment
-    state = env.reset()
-    if np.array_equal(state, [None]):
-      while state == [None]:
-        state, reward, done, _ = env.step([[]])
-    env.render()
-    state = state_proc.process(sess, (state[0])['vision'])
-    state = np.stack([state] * 4, axis = 2)
     loss = None
 
     #One step in the environment
     for t in itertools.count():
       #Epsilon for this time step
       epsilon = epsilons[min(total_t, ri_dict["epsilon_decay_steps"]-1)]
+
+      #Add epsilon to Tensorboard
+      episode_summary = tf.Summary()
+      episode_summary.value.add(simple_value = epsilon, tag = "epsilon")
+      qnetwork.summary_writer.add_summary(episode_summary, total_t)
 
       #Update the target estimator
       if total_t % ri_dict["update_target_estimator_every"] == 0:
@@ -332,53 +352,71 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
       sys.stdout.flush()
 
       #Take a step
-      if np.array_equal(state, [None]) == False:
-        action_probs = policy(sess, state, epsilon)
-        print action_probs
-
+      action_probs = policy(sess, state, epsilon)
+      print action_probs
       act = chooseAction(action_probs)
       action = [doAction(act)]
+
       next_state, reward, done, _ = env.step(action)
-
+      env.render()
       if np.array_equal(next_state, [None]):
-        env.render()
+        print "Done and resetting environment"
+        while np.array_equal(next_state, [None]):
+          next_state, reward, done, _ = env.step([doAction(-2)])
+        next_state = state_proc.process(sess, (next_state[0])['vision'])
+        next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
+        state = next_state
+        break
       else:
-        if np.array_equal(state, [None]) == False:
-          env.render()
-          next_state = state_proc.process(sess, (next_state[0])['vision'])
-          next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
-          #If our replay memory is full, pop the first element
-          if len(replay_memory) == ri_dict["replay_memory_size"]:
-            replay_memory.pop(0)
-          #Save transition to replay memory
-          if act != -1:
-            replay_memory.append(Transition(state,act,reward,next_state,done))
+        next_state = state_proc.process(sess, (next_state[0])['vision'])
+        next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
+        #If our replay memory is full, pop the first element
+        if len(replay_memory) == ri_dict["replay_memory_size"]:
+          replay_memory.pop(0)
+        #Save transition to replay memory
+        if act != -1:
+          replay_memory.append(Transition(state,act,reward,next_state,done))
 
-            #Sample a minibatch from the replay memory
-            samples = random.sample(replay_memory, ri_dict["batch_size"])
-            states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
+          #Update Statistics
+          stats.episode_rewards[i] += reward
+          stats.episode_lengths[i] = t
 
-            #Calculate the q values and targets
-            q_values_next = qnetwork.predict(sess, next_states_batch)
-            best_actions = np.argmax(q_values_next, axis = 1)
-            q_values_next_target = targetNetwork.predict(sess, next_states_batch)
-            targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * ri_dict["discount_factor"] * q_values_next_target[np.arange(ri_dict["batch_size"]), best_actions]
+          #Sample a minibatch from the replay memory
+          samples = random.sample(replay_memory, ri_dict["batch_size"])
+          states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
 
-            #Perform gradient descent update
-            states_batch = np.array(states_batch)
-            loss = qnetwork.update(sess, states_batch, action_batch, targets_batch)
+          #Calculate the q values and targets
+          q_values_next = qnetwork.predict(sess, next_states_batch)
+          best_actions = np.argmax(q_values_next, axis = 1)
+          q_values_next_target = targetNetwork.predict(sess, next_states_batch)
+          targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * ri_dict["discount_factor"] * q_values_next_target[np.arange(ri_dict["batch_size"]), best_actions]
 
-            if done == [True]:
-              break
+          #Perform gradient descent update
+          states_batch = np.array(states_batch)
+          loss = qnetwork.update(sess, states_batch, action_batch, targets_batch)
 
-      state = next_state
-      total_t += 1
+          if done == [True]:
+            break
+
+          state = next_state
+          total_t += 1
+
+    #Add summaries to Tensorboard
+    episode_summary = tf.Summary()
+    episode_summary.value.add(simple_value = stats.episode_rewards[i], node_name = "episode_reward", tag = "episode_reward")
+    episode_summary.value.add(simple_value = stats.episode_lengths[i], node_name = "episode_lengths", tag = "episode_lengths")
+    qnetwork.summary_writer.add_summary(episode_summary, total_t)
+    qnetwork.summary_writer.flush()
+
+    yield total_t, plotting.EpisodeStats(episode_lengths = stats.episode_lengths[:i+1],episode_rewards = stats.episode_rewards[:i+1])
 
 env = gym.make('wob.mini.ClickTest-v0')
 env.configure(remotes=1, fps=5,
               vnc_driver='go', 
               vnc_kwargs={'encoding': 'tight', 'compress_level': 0, 
                           'fine_quality_level': 100, 'subsample_level': 0})
+
+# tf.reset_default_graph()
 
 #Where we will save our checkpoints
 experiment_dir = os.path.abspath("./")
@@ -387,7 +425,7 @@ experiment_dir = os.path.abspath("./")
 global_step = tf.Variable(0, name = 'global_step', trainable = False)
 
 #Create networks
-q_net = qNetwork(scope = "q")
+q_net = qNetwork(scope = "q", summaries_dir=experiment_dir)
 target_net = qNetwork(scope = "target_q")
 
 #State processor
