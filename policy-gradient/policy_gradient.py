@@ -5,6 +5,8 @@ import tensorflow as tf
 import scipy.misc
 import tensorflow.contrib.slim as slim
 import matplotlib.pyplot as plt
+import plotly.plotly as py
+import plotly.graph_objs as go
 
 env = gym.make('wob.mini.ClickTest-v0')
 env.configure(remotes=1, fps=2,
@@ -50,6 +52,7 @@ class agent():
         
         optimizer = tf.train.AdamOptimizer(learning_rate=lr)
         self.update_batch = optimizer.apply_gradients(zip(self.gradient_holders,tvars))
+
 
 
 tf.reset_default_graph() #Clear the Tensorflow graph.
@@ -118,7 +121,6 @@ def manipulateState(s, coordX,coordY):
 myAgent = agent(lr=1e-2,s_size=84*32*3,a_size=6,h_size=8) #Load the agent.
 #s_sze is expecting one input coz its a flat vector (array), sp
 total_episodes = 10 #Set total number of episodes to train agent on.
-max_ep = 10
 update_frequency = 1
 
 init = tf.global_variables_initializer()
@@ -135,6 +137,7 @@ with tf.Session() as sess:
     #starting cursor in the middle of the frame
     coordX = 80+10 
     coordY = 80+75+50
+    d = False
         
     gradBuffer = sess.run(tf.trainable_variables())
     for ix,grad in enumerate(gradBuffer):
@@ -148,30 +151,35 @@ with tf.Session() as sess:
         #TODO SET S into something until s is not
         ep_history = []
         #loop through each clicks
-        for j in range(max_ep): 
+        while d != True: 
             completed_click+=1
             s = manipulateState(s, coordX, coordY)
             #Choose either a random action or one from our network.
             a_dist = sess.run(myAgent.output,feed_dict={myAgent.state_in:np.array(s)})
             #a_dist = [[0.15,0.15,0.15,0.15,0.15,0.25]]
             a_dist = 0.5 * (a_dist + np.ones((1, 6)) / 6)
+            a_dist /= a_dist.sum()
             print "adist!" ,a_dist
             #pick from 0-6 choices and get the probability
             a = np.random.choice(np.arange(0,6),p=a_dist[0])
-            print a
+            
             #a = np.argmax(a_dist == a) #takes the highest value from the array, but why a_dist==a?
             actionset= doAction(a, coordX, coordY)
             print "GDJHSGD", actionset
             s1,r,d,_ = env.step([actionset[0]]) #Get our reward for taking an action given a bandit.
             #print "GDJHSGD", actionset
+            if(d==True):
+                print "Done is True!"
+            
+            print "Chosen action:", a, "and HEREEE", r[0]
             ep_history.append([s,a,r,s1])
             s = s1
             
             running_reward += r[0]
             print "Total Cumulative Reward now:", running_reward, "R is here",r[0]
 
-            print_cur_reward.append(r[0])
-            print "Reward each click:", print_cur_reward
+            # print_cur_reward.append(r[0])
+            # print "Reward each click:", print_cur_reward
 
             print "gfhgj", len(r)
             if d == True:
@@ -192,6 +200,7 @@ with tf.Session() as sess:
                 
                 total_reward.append(running_reward)
                 total_lenght.append(j)
+                print "Q Value", sess.run(myAgent.output, feed_dict=feed_dict)
                 break
             env.render()
         end_rewards=running_reward/completed_click
