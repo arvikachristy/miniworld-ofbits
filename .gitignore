@@ -2,3 +2,7 @@
 *evaluation
 *dqn-model
 deepq\ \(raj\)/checkpoints
+
+dd-dqn/reward.txt
+
+dd-dqn/average.txt
