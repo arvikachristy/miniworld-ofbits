@@ -6,8 +6,8 @@ class Output:
     'export the reward'
     #use f = Output() to initiate, use f.saveEpisode(int_episode_number, int_reward) to write a record in both files
 
-    def __init__(self, summary_freq=20, outputDirName="evaluation", rewardFileName="rewards", summaryFileName="summary"):
-        self.summary_freq = summary_freq
+    def __init__(self, summaryFreq=20, outputDirName="evaluation", rewardFileName="rewards", summaryFileName="summary"):
+        self.summaryFreq = summaryFreq
         if outputDirName != "":
             #Make a path for our model to be saved in.
             if not os.path.exists(outputDirName):
@@ -61,7 +61,7 @@ class Output:
     def saveEpisode(self,episode,reward):
         self.open()
         self.addReward(episode, reward)
-        if episode % self.summary_freq == 0:
+        if episode % self.summaryFreq == 0:
             self.addSummary(episode)
         self.close()
 

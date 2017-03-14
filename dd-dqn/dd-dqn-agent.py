@@ -6,6 +6,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import scipy.misc
 import os
+import sys
 
 from utils.Output import Output
 from ExperienceBuffer import ExperienceBuffer
@@ -28,7 +29,7 @@ class QLearner():
 
     # We take the output from the final convolutional layer and split it into separate
     # advantage and value streams.
-    self.streamAC, self.streamVC = tf.split(3, 2, self.conv4)
+    self.streamAC, self.streamVC = tf.split(self.conv4, num_or_size_splits=2, axis=3)
     self.streamA = tf.contrib.layers.flatten(self.streamAC)
     self.streamV = tf.contrib.layers.flatten(self.streamVC)
     self.AW = tf.Variable(tf.random_normal([h_size/2, self.num_actions]))
@@ -37,7 +38,7 @@ class QLearner():
     self.Value = tf.matmul(self.streamV, self.VW)
 
     # Then combine them together to get our final Q-values
-    self.QOut = self.Value + tf.sub(self.Advantage,
+    self.QOut = self.Value + tf.subtract(self.Advantage,
       tf.reduce_mean(self.Advantage, reduction_indices=1, keep_dims=True))
     self.predict = tf.argmax(self.QOut, 1)
 
@@ -47,7 +48,7 @@ class QLearner():
     self.actions = tf.placeholder(shape=[None],dtype=tf.int32)
     self.actions_onehot = tf.one_hot(self.actions, self.num_actions, dtype=tf.float32)
     
-    self.Q = tf.reduce_sum(tf.mul(self.QOut, self.actions_onehot), reduction_indices=1)
+    self.Q = tf.reduce_sum(tf.multiply(self.QOut, self.actions_onehot), reduction_indices=1)
     
     self.td_error = tf.square(self.targetQ - self.Q)
     self.loss = tf.reduce_mean(self.td_error)
@@ -62,7 +63,7 @@ def processState(s, cursorY, cursorX):
 
             # divide by 5
             lowres = scipy.misc.imresize(crop, (42, 32, 3))
-            lowresT = tf.pack(lowres)
+            lowresT = tf.stack(lowres)
 
             windowX = 32
             windowY = 42
@@ -154,12 +155,21 @@ h_size = 512 # The size of the final convolutional layer before splitting it int
 tau = 0.001 # Rate to update target network toward primary network
 
 load_model = False # Whether to load a saved model.
-path = "./dqn-model" # The path to save our model to.
+checkpoint_path_suffix = "dqn-model"
+checkpoint_path = checkpoint_path_suffix # The path to save our model to.
+evaluation_path_suffix = "evaluation"
+evaluation_path = evaluation_path_suffix
 plot_vision = False # Plot the agent's view of the environment
 save_history = True # If true, write results to file. If false, render environment.
 summary_print_freq = 10 # How often (in episodes) to print a summary
 summary_freq = 20 # How often (in episodes) to write a summary to a summary file
 checkpoint_freq = 100 # How often (in episodes) to save a checkpoint of model parameters
+
+# Add ID to output directory names to distinguish between runs
+if len(sys.argv) > 1:
+    agent_id = str(sys.argv[1])
+    checkpoint_path = agent_id + "-" + checkpoint_path_suffix
+    evaluation_path = agent_id + "-" + evaluation_path_suffix
 
 
 env = gym.make('wob.mini.ClickTest-v0')
@@ -181,10 +191,10 @@ saver = tf.train.Saver()
 
 if save_history:
     # Records the agent's performance (e.g. avg reward)
-    history_writer = Output(summary_freq=summary_freq)
+    history_writer = Output(summaryFreq=summary_freq, outputDirName=evaluation_path)
     #Make a path for our model to be saved in.
-    if not os.path.exists(path):
-        os.makedirs(path)
+    if not os.path.exists(checkpoint_path):
+        os.makedirs(checkpoint_path)
 
 trainables = tf.trainable_variables()
 targetOps = updateTargetGraph(trainables,tau)
@@ -208,10 +218,10 @@ misses = 0
 with tf.Session() as sess:
     if load_model:
         print 'Loading Model...'
-        ckpt = tf.train.get_checkpoint_state(path)
-        saver.restore(sess,ckpt.model_checkpoint_path)
+        ckpt = tf.train.get_checkpoint_state(checkpoint_path)
+        saver.restore(sess, ckpt.model_checkpoint_path)
     sess.run(init)
-    updateTarget(targetOps,sess) #Set the target network to be equal to the primary network.
+    updateTarget(targetOps, sess) #Set the target network to be equal to the primary network.
     i = 0
     s = env.reset()
     prevY = 80+75+50
@@ -312,7 +322,7 @@ with tf.Session() as sess:
 
         #Periodically save the model.
         if save_history and i % checkpoint_freq == 0:
-            saver.save(sess,path+'/model', global_step=i)#+'.cptk')
+            saver.save(sess, checkpoint_path+'/model', global_step=i)#+'.cptk')
             print "Saved Model"
         if i % summary_print_freq == 0:
             print 'Actions taken', np.sum(jList)
@@ -324,5 +334,5 @@ with tf.Session() as sess:
             'avg steps/episode (last 100):', np.mean(jList[-100:]), '(last 10)', np.mean(jList[-10:])
             print 'Rewards', rewards
     if save_history:
-        saver.save(sess,path+'/model-'+str(i)+'.cptk')
+        saver.save(sess, checkpoint_path+'/model-'+str(i)+'.cptk')
 print "Average reward: ", np.mean(rList)
