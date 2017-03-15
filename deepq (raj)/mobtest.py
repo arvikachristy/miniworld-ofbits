@@ -13,26 +13,27 @@ if "../" not in sys.path:
 from lib import plotting
 from collections import deque, namedtuple
 
+tf.reset_default_graph()
+
 # Global dictionary with set parameters for the Deep-Q Network
 ri_dict = {
   "num_Episodes" : 10000,
   'num_Actions' : 5,
-  'replay_memory_size' : 50000,
-  'replay_memory_init_size' : 1000,
-  'update_target_estimator_every' : 1000,
+  'replay_memory_size' : 150000,
+  'replay_memory_init_size' : 15000,
+  'update_target_estimator_every' : 3000,
   'discount_factor' : 0.99,
   'epsilon_start' : 1.0,
   'epsilon_end': 0.1,
-  'epsilon_decay_steps': 10000,
-  'batch_size' : 32,
-  'startState' : 1
+  'epsilon_decay_steps': 150000,
+  'batch_size' : 32
 }
 
 # Global dictionary that stores the x-coordinate and y-coordinate values # 
 cord_dict = {
-  "xCord" : tf.Variable(tf.zeros([1],dtype = tf.int32), name = "xCord"),
-  "yCord" : tf.Variable(tf.zeros([1],dtype = tf.int32), name = "yCord")
-  }
+  "xCord" : 0,
+  "yCord" : 0
+}
 
 # List of discrete actions (will later attempt to look into continuous action spaces) # 
 # Very imoortant that the list of discrete actions start indexing from 0 rather than 1 due to batch probability calculation purposes #
@@ -52,7 +53,7 @@ class prepState():
     self.input_state = tf.placeholder(shape = [210,160,3], dtype = tf.uint8)
     self.output = tf.image.rgb_to_grayscale(self.input_state)
     self.output = tf.image.crop_to_bounding_box(self.output, 50, 0, 160, 160)
-    self.output = tf.image.resize_images(self.output,[80,80], method = tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+    self.output = tf.image.resize_images(self.output,[84,84], method = tf.image.ResizeMethod.NEAREST_NEIGHBOR)
     self.output = tf.squeeze(self.output)
 
   def process(self, sess, state):
@@ -76,14 +77,13 @@ class qNetwork():
   def _build_model(self):
     #Placeholders for the input
     #The input will be 4 80x80 Grayscale images
-    self.X_pl = tf.placeholder(shape = [None,80,80,4], dtype = tf.uint8, name = "X")
+    self.X_pl = tf.placeholder(shape = [None,84,84,4], dtype = tf.uint8, name = "X")
     #The Temporal-Difference target value
     self.y_pl = tf.placeholder(shape = [None], dtype = tf.float32, name = "y")
     #Integer ID of which action was selected
     self.actions_pl = tf.placeholder(shape = [None], dtype = tf.int32, name = "actions")
 
     X = tf.to_float(self.X_pl) / 255.0 
-
     batch_size = tf.shape(self.X_pl)[0] #Gets the first index from the shape of X_pl (number of batches)
 
     #Three convolutional layers
@@ -164,69 +164,62 @@ def make_epsilon_greedy_policy(qnetwork, numA):
 
 def newCord(act):
   if act == 1:
-    x = tf.subtract(cord_dict['yCord'],20).eval()
+    x = cord_dict['yCord'] - 20
     y = 125
-    if tf.less_equal(x,y).eval() == 1:
+    if np.less_equal(x,y) == 1:
       print "Position unchanged"
     else:
-      sess.run(cord_dict["yCord"].assign_sub([20]))
+      cord_dict['yCord'] = x
   elif act == 2:
-    x = tf.add(cord_dict['yCord'],20).eval()
+    x = cord_dict['yCord'] + 20
     y = 285 
-    if tf.greater_equal(x,y).eval() == 1:
+    if np.greater_equal(x,y) == 1:
       print "Position unchanged"
     else:
-      sess.run(cord_dict["yCord"].assign_add([20]))
+      cord_dict["yCord"] = x
   elif act == 3:
-    x = tf.add(cord_dict['xCord'],20).eval()
+    x = cord_dict['xCord'] + 20
     y = 170
-    if tf.greater_equal(x,y).eval() == 1:
+    if np.greater_equal(x,y) == 1:
       print "Position unchanged"
     else:
-      sess.run(cord_dict["xCord"].assign_add([20]))
+      cord_dict["xCord"] = x
   elif act == 4:
-    x = tf.subtract(cord_dict['xCord'],20).eval()
+    x = cord_dict['xCord']-20
     y = 10
-    if tf.less_equal(x,y).eval() == 1:
+    if np.less_equal(x,y) == 1:
       print "Position unchanged"
     else:
-      sess.run(cord_dict["xCord"].assign_sub([20]))
+      cord_dict["xCord"] = x
   elif act == 0:
     print "Click"
 
 # randCord randomises the x-cordinate and y-cordinate values # 
 def randCord():
-  sess.run(cord_dict["xCord"].assign(tf.random_uniform([1],minval = 10, maxval = 170, dtype = tf.int32)))
-  sess.run(cord_dict["yCord"].assign(tf.random_uniform([1],minval =125, maxval = 285, dtype = tf.int32)))
+  cord_dict["xCord"] = np.random.choice(np.arange(10,170))
+  cord_dict["yCord"] = np.random.choice(np.arange(125,285))
+  # sess.run(cord_dict["xCord"].assign(tf.random_uniform([1],minval = 10, maxval = 170, dtype = tf.int32)))
+  # sess.run(cord_dict["yCord"].assign(tf.random_uniform([1],minval =125, maxval = 285, dtype = tf.int32)))
 
 # chooseAction produces a random integer (representing the action to take) based on the action probabilities table
 def chooseAction(action_prob):
-  if ri_dict["startState"] == 1:
-    ri_dict["startState"] = 0
-    return -1
-  elif ri_dict["startState"] == 0:
-    act = np.random.choice(np.arange(0,5), p = action_prob)
-    print "Chosen Action <--------------"
-    print act
-    return act
+  act = np.random.choice(np.arange(0,5), p = action_prob)
+  print "Chosen Action <--------------"
+  print act
+  return act
 
 #doAction returns the next action
 def doAction(act_num):
-  if act_num == -1:
-    randCord()
-      # 1. move to x,y with left button released, and click there (2. and 3.)
-    action = [universe.spaces.PointerEvent(cord_dict["xCord"].eval(), cord_dict["yCord"].eval(),0)]
-    return action
-  elif act_num == -2:
-    action = [universe.spaces.PointerEvent(cord_dict["xCord"].eval(), cord_dict["yCord"].eval(),0)]
+  if act_num == -2:
+    action = [universe.spaces.PointerEvent(cord_dict["xCord"], cord_dict["yCord"],0)]
     return action
   elif act_num == 0:
-    action = [universe.spaces.PointerEvent(cord_dict["xCord"].eval(), cord_dict["yCord"].eval(),1),
-              universe.spaces.PointerEvent(cord_dict["xCord"].eval(), cord_dict["yCord"].eval(),0)]
+    action = [universe.spaces.PointerEvent(cord_dict["xCord"], cord_dict["yCord"],1),
+              universe.spaces.PointerEvent(cord_dict["xCord"], cord_dict["yCord"],0)]
     return action
   else:
     newCord(act_num)
-    action = [universe.spaces.PointerEvent(cord_dict["xCord"].eval(), cord_dict["yCord"].eval(),0)]
+    action = [universe.spaces.PointerEvent(cord_dict["xCord"], cord_dict["yCord"],0)]
     return action
 
 def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc):
@@ -270,17 +263,15 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
   #Populate the replay memory with initial experience
   print "Populating replay memory"
   state = env.reset()
-
   #There are instances were the states returned are [None]. This loop will iterate until a legitimate state is returned
   if np.array_equal(state, [None]):
     while state == [None]:
       state, reward, done, _ = env.step([[]])
 
-  env.render()
   state = state_proc.process(sess, (state[0])['vision'])
   # We stack to take 4 instances of states
   state = np.stack([state] * 4, axis = 2)
-  action_probs = []
+  randCord()
 
   #The following loop is to simply fill the replay memory with transition tuples. The number of iterations is stated in the initial parameters
   for i in range(ri_dict["replay_memory_init_size"]):
@@ -297,37 +288,37 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
     next_state, reward, done, _ = env.step(action)
     if np.array_equal(next_state, [None]):
       #The environment is resetting (likely time is up and is done)
-      print "Done and resetting environment"
-      while np.array_equal(next_state, [None]):
-        next_state, reward, done, _ = env.step([doAction(-2)])
-      next_state = state_proc.process(sess, (next_state[0])['vision'])
-      next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
-      env.render()
-      #We do not add this to the replay memory as this is a reset
-      state = next_state
+      state = env.reset()
+      if np.array_equal(state, [None]):
+        while state == [None]:
+          state, reward, done, _ = env.step([[]])
+      state = state_proc.process(sess, (state[0])['vision'])
+      state = np.stack([state] * 4, axis = 2)
     else:
       next_state = state_proc.process(sess, (next_state[0])['vision'])
       next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
-      env.render()
-      #Add transition to the replay memory as long as it is not the starting transition
-      if act != -1:
-        replay_memory.append(Transition(state,act,reward,next_state,done))
-      state = next_state
+      replay_memory.append(Transition(state,act,reward,next_state,done))
+      if done == [True]:
+        state = env.reset()
+        if np.array_equal(state, [None]):
+          while state == [None]:
+            state, reward, done, _ = env.step([[]])
+        state = state_proc.process(sess, (state[0])['vision'])
+        state = np.stack([state] * 4, axis = 2)
+      else:
+        state = next_state
 
-  #Reset the environment
   state = env.reset()
   if np.array_equal(state, [None]):
     while state == [None]:
       state, reward, done, _ = env.step([[]])
-  env.render()
   state = state_proc.process(sess, (state[0])['vision'])
   state = np.stack([state] * 4, axis = 2)
 
   #Once replay memory initialization is completed, run the training process
   for i in range(ri_dict["num_Episodes"]):
-    print "Running training steps <---------------------------------------------------------------------------------------"
     #Save the current checkpoint
-    if i % 10 == 0:
+    if i % 25 == 0:
       saver.save(tf.get_default_session(), checkpoint_path)
 
     loss = None
@@ -356,16 +347,15 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
       print action_probs
       act = chooseAction(action_probs)
       action = [doAction(act)]
-
       next_state, reward, done, _ = env.step(action)
-      env.render()
       if np.array_equal(next_state, [None]):
-        print "Done and resetting environment"
-        while np.array_equal(next_state, [None]):
-          next_state, reward, done, _ = env.step([doAction(-2)])
-        next_state = state_proc.process(sess, (next_state[0])['vision'])
-        next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
-        state = next_state
+        #The environment is resetting (likely time is up and is done)
+        state = env.reset()
+        if np.array_equal(state, [None]):
+          while state == [None]:
+            state, reward, done, _ = env.step([[]])
+        state = state_proc.process(sess, (state[0])['vision'])
+        state = np.stack([state] * 4, axis = 2)
         break
       else:
         next_state = state_proc.process(sess, (next_state[0])['vision'])
@@ -374,32 +364,37 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
         if len(replay_memory) == ri_dict["replay_memory_size"]:
           replay_memory.pop(0)
         #Save transition to replay memory
-        if act != -1:
-          replay_memory.append(Transition(state,act,reward,next_state,done))
+        replay_memory.append(Transition(state,act,reward,next_state,done))
 
-          #Update Statistics
-          stats.episode_rewards[i] += reward
-          stats.episode_lengths[i] = t
+      #Update Statistics
+      stats.episode_rewards[i] += reward
+      stats.episode_lengths[i] = t
 
-          #Sample a minibatch from the replay memory
-          samples = random.sample(replay_memory, ri_dict["batch_size"])
-          states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
+      #Sample a minibatch from the replay memory
+      samples = random.sample(replay_memory, ri_dict["batch_size"])
+      states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
 
-          #Calculate the q values and targets
-          q_values_next = qnetwork.predict(sess, next_states_batch)
-          best_actions = np.argmax(q_values_next, axis = 1)
-          q_values_next_target = targetNetwork.predict(sess, next_states_batch)
-          targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * ri_dict["discount_factor"] * q_values_next_target[np.arange(ri_dict["batch_size"]), best_actions]
+      #Calculate the q values and targets
+      q_values_next = qnetwork.predict(sess, next_states_batch)
+      best_actions = np.argmax(q_values_next, axis = 1)
+      q_values_next_target = targetNetwork.predict(sess, next_states_batch)
+      targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * ri_dict["discount_factor"] * q_values_next_target[np.arange(ri_dict["batch_size"]), best_actions]
 
-          #Perform gradient descent update
-          states_batch = np.array(states_batch)
-          loss = qnetwork.update(sess, states_batch, action_batch, targets_batch)
+      #Perform gradient descent update
+      states_batch = np.array(states_batch)
+      loss = qnetwork.update(sess, states_batch, action_batch, targets_batch)
 
-          if done == [True]:
-            break
+      if done == [True]:
+        state = env.reset()
+        if np.array_equal(state, [None]):
+          while state == [None]:
+            state, reward, done, _ = env.step([[]])
+        state = state_proc.process(sess, (state[0])['vision'])
+        state = np.stack([state] * 4, axis = 2)
+        break
 
-          state = next_state
-          total_t += 1
+      state = next_state
+      total_t += 1
 
     #Add summaries to Tensorboard
     episode_summary = tf.Summary()
@@ -411,12 +406,10 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
     yield total_t, plotting.EpisodeStats(episode_lengths = stats.episode_lengths[:i+1],episode_rewards = stats.episode_rewards[:i+1])
 
 env = gym.make('wob.mini.ClickTest-v0')
-env.configure(remotes=1, fps=5,
+env.configure(remotes=1, fps=15,
               vnc_driver='go', 
               vnc_kwargs={'encoding': 'tight', 'compress_level': 0, 
                           'fine_quality_level': 100, 'subsample_level': 0})
-
-# tf.reset_default_graph()
 
 #Where we will save our checkpoints
 experiment_dir = os.path.abspath("./")
