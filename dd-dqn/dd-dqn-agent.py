@@ -189,8 +189,9 @@ def addReward(r, ep_num, rewards, successes, fails, misses):
 def discountEpsilon(epsilon, step_drop, end_epsilon):
     if epsilon > end_epsilon:
         epsilon -= step_drop
+    return epsilon
 
-def trainQNs(mainQN, targetQN, trainBatch, batch_size, sess, y):
+def trainQNs(mainQN, targetQN, trainBatch, batch_size, y, sess):
     QOut1 = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:np.stack(trainBatch[:,3])})
     Q1 = chooseActionFromQOut(QOut1)
     Q2 = sess.run(targetQN.QOut,feed_dict={targetQN.imageIn:np.stack(trainBatch[:,3])})
@@ -218,12 +219,15 @@ def getOutputDirNames():
     checkpoint_path = checkpoint_path_suffix # The path to save our model to.
     evaluation_path_suffix = "evaluation"
     evaluation_path = evaluation_path_suffix
+    tboard_path_suffix = "tboard"
+    tboard_path = tboard_path_suffix
     # Add ID to output directory names to distinguish between runs
     if len(sys.argv) > 1:
         agent_id = str(sys.argv[1])
         checkpoint_path = agent_id + "-" + checkpoint_path_suffix
         evaluation_path = agent_id + "-" + evaluation_path_suffix
-    return checkpoint_path, evaluation_path
+        tboard_path = agent_id + "-" + tboard_path_suffix
+    return checkpoint_path, evaluation_path, tboard_path
 
 def loadModel(saver, checkpoint_path, sess):
     print 'Loading Model...'
@@ -243,14 +247,15 @@ start_epsilon = 1 # Starting chance of random action
 end_epsilon = 0.1 # Final chance of random action
 anneling_steps = 30000. # How many steps of training to reduce startE to endE.
 num_episodes = 7000 # How many episodes of game environment to train network with.
-pre_train_steps = 500 # How many steps of random actions before training begins.
+pre_train_steps = 50000 # How many steps of random actions before training begins.
 h_size = 512 # The size of the final convolutional layer before splitting it into Advantage and Value streams.
 tau = 0.001 # Rate to update target network toward primary network
 
 load_model = False # Whether to load a saved model.
-checkpoint_path, evaluation_path = getOutputDirNames()
+checkpoint_path, evaluation_path, tboard_path = getOutputDirNames()
 plot_vision = False # Plot the agent's view of the environment
 save_history = True # If true, write results to file. If false, render environment.
+tboard_summaries = True
 summary_print_freq = 10 # How often (in episodes) to print a summary
 summary_freq = 20 # How often (in episodes) to write a summary to a summary file
 checkpoint_freq = 100 # How often (in episodes) to save a checkpoint of model parameters
@@ -262,6 +267,7 @@ tf.reset_default_graph()
 mainQN = QLearner(h_size)
 targetQN = QLearner(h_size)
 
+global_step = tf.Variable(0, name='global_step', trainable=False)
 init = tf.global_variables_initializer()
 
 # Periodically saves snapshots of the trained CNN weights
@@ -274,6 +280,11 @@ if save_history:
     #Make a path for our model to be saved in.
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
+
+if tboard_summaries:
+    summary_writer = tf.summary.FileWriter(tboard_path)
+    if not os.path.exists(tboard_path):
+        os.makedirs(tboard_path)
 
 trainables = tf.trainable_variables()
 targetOps = updateTargetGraph(trainables,tau)
@@ -298,6 +309,7 @@ with tf.Session() as sess:
     if load_model:
         loadModel(saver, checkpoint_path, sess)
     sess.run(init)
+    total_t = sess.run(tf.contrib.framework.get_global_step())
     updateTarget(targetOps, sess) #Set the target network to be equal to the primary network.
     ep_num = 0
     # Center cursor and wait until state observation s is valid
@@ -305,7 +317,6 @@ with tf.Session() as sess:
 
     while ep_num < num_episodes:
         episodeBuffer = ExperienceBuffer()
-
         s = getValidObservation(env, prevX, prevY)
         s1 = s
         d = False
@@ -347,7 +358,7 @@ with tf.Session() as sess:
                 if total_steps % (update_freq) == 0:
                     trainBatch = myBuffer.sample(batch_size) #Get a random batch of experiences.
                     #Below we perform the Double-DQN update to the target Q-values
-                    trainQNs(mainQN, targetQN, trainBatch, batch_size, y)
+                    trainQNs(mainQN, targetQN, trainBatch, batch_size, y, sess)
                     updateTarget(targetOps,sess) #Set the target network to be equal to the primary network.
             rAll += r[0]
             
@@ -355,6 +366,14 @@ with tf.Session() as sess:
                 rewards, successes, fails, misses = addReward(r[0], ep_num, rewards, successes, fails, misses)
                 if save_history:
                     history_writer.saveEpisode(ep_num, r[0])
+                if tboard_summaries:
+                    episode_summary = tf.Summary()
+                    episode_summary.value.add(simple_value=r[0], tag="Reward")
+                    episode_summary.value.add(simple_value=epsilon, tag="Epsilon")
+                    episode_summary.value.add(simple_value=step_num, tag="Actions per episode")
+                    summary_writer.add_summary(episode_summary, total_t)
+                    summary_writer.flush()
+                    total_t += 1
                 total_steps += step_num
                 print 'Steps taken this episode:', step_num
             s = s1

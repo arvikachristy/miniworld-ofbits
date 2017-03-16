@@ -1,8 +1,10 @@
 *.pyc
+
+# Agent evaluation and log files
 *evaluation
 *dqn-model
-deepq\ \(raj\)/checkpoints
-
+*tboard
 dd-dqn/reward.txt
-
 dd-dqn/average.txt
+
+deepq\ \(raj\)/checkpoints
