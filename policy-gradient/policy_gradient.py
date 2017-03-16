@@ -170,10 +170,11 @@ with tf.Session() as sess:
             a_dist = sess.run(myAgent.output,feed_dict={myAgent.state_in:np.array(s)})
             #a_dist = [[0.15,0.15,0.15,0.15,0.15,0.25]]
             print "Agent speaking", myAgent.state_in
-            print a_dist.sum(), "SUM IS HERE"
+            print a_dist, "adist 0"
             a_dist = 0.5 * (a_dist + np.ones((1, 6)) / 6) #average uniform probability
+            print "adist!1" ,a_dist
             a_dist /= a_dist.sum()
-            print "adist!" ,a_dist
+            print "adist!2" ,a_dist
             #pick from 0-6 choices and get the probability
             a = np.random.choice(np.arange(0,6),p=a_dist[0])
             
@@ -218,8 +219,8 @@ with tf.Session() as sess:
             env.render()
         end_rewards=running_reward/completed_click
         d=False
-        print (running_reward/float(10)), "heyo", completed_click
-        print_tot_reward.append(running_reward/float(10))
+        # print (running_reward/float(10)), "heyo", completed_click
+        # print_tot_reward.append(running_reward/float(10))
             #Update our running tally of scores.
         if i % 100 == 0:
             print np.mean(total_reward[-100:])
