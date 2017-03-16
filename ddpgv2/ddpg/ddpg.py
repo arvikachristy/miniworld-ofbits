@@ -314,13 +314,16 @@ def train(sess, env, actor, critic):
     replay_buffer = ReplayBuffer(BUFFER_SIZE)
 
     for i in xrange(MAX_EPISODES):
+        print "=====STARTING EPISODE: ", i , "=====\n"
         observation = env.reset()
         ep_reward = 0
         ep_ave_max_q = 0
 
         #initialize randomly for each episode
-        xcoord = np.random.randint(0, 160) + 10  
-        ycoord = np.random.randint(0, 160) + 75 + 50 
+        #xcoord = np.random.randint(0, 160) + 10  
+        #ycoord = np.random.randint(0, 160) + 75 + 50 
+        xcoord = 10
+        ycoord = 125
         prev_am = [0]#previous action magnitude - angle only at the moment
         for j in xrange(MAX_EP_STEPS):
             env.render()
@@ -331,74 +334,74 @@ def train(sess, env, actor, critic):
                     crop = x[75:75+210, 10:10+160, :]
                 else:
                     crop = [0,0]
-                print "Previous observation: ", crop
-
-                # Added exploration noise
-                noise = (1. / (1. + i + j))
-                current_am = actor.predict(np.reshape(prev_am, (1,1))) + noise
-                print "current_am", current_am
-                prev_am=current_am
-
-                #current_dm = current_am[0]
-                current_anm = current_am[0]
-                xcoord,ycoord=move(xcoord,ycoord,max_dist,scale_angle(current_anm)) #get new x and ycoord, currently only moves fixed distance
-                a=click(xcoord,ycoord)
                 
-                new_observation, r, terminal, info = env.step(a)
-                print "chosen action: ", a
-                env.render()
+            print "Previous observation: ", crop
+            # Added exploration noise
+            noise = (1. / (1. + i + j))
+            current_am = actor.predict(np.reshape(prev_am, (1,1))) + noise
+            print "current_am", current_am
+            prev_am=current_am
 
-                replay_buffer.add(np.reshape(observation, (actor.s_dim,)), np.reshape(current_am, (actor.a_dim,)), r, \
-                    terminal, np.reshape(new_observation, (actor.s_dim,)))
+            #current_dm = current_am[0]
+            current_anm = current_am[0]
+            xcoord,ycoord=move(xcoord,ycoord,max_dist,scale_angle(current_anm)) #get new x and ycoord, currently only moves fixed distance
+            a=click(xcoord,ycoord)
+            
+            new_observation, r, done, info = env.step(a)
+            print "chosen action: ", a
+            env.render()
 
-                # Keep adding experience to the memory until
-                # there are at least minibatch size samples
-                # if replay_buffer.size() > MINIBATCH_SIZE: 
-                if 0:    
-                    s_batch, a_batch, r_batch, t_batch, s2_batch = \
-                        replay_buffer.sample_batch(MINIBATCH_SIZE)
+            replay_buffer.add(np.reshape(observation, (actor.s_dim,)), np.reshape(current_am, (actor.a_dim,)), r, \
+                done, np.reshape(new_observation, (actor.s_dim,)))
 
-                    # Calculate targets
-                    target_q = critic.predict_target(s2_batch, actor.predict_target(s2_batch))
+            # Keep adding experience to the memory until
+            # there are at least minibatch size samples
+            #if replay_buffer.size() > MINIBATCH_SIZE: 
+            if 0: 
+                s_batch, a_batch, r_batch, t_batch, s2_batch = \
+                    replay_buffer.sample_batch(MINIBATCH_SIZE)
 
-                    y_i = []
-                    for k in xrange(MINIBATCH_SIZE):
-                        if t_batch[k]:
-                            y_i.append(r_batch[k])
-                        else:
-                            y_i.append(r_batch[k] + GAMMA * target_q[k])
+                # Calculate targets
+                target_q = critic.predict_target(s2_batch, actor.predict_target(s2_batch))
 
-                    # Update the critic given the targets
-                    predicted_q_value, _ = critic.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
-                
-                    ep_ave_max_q += np.amax(predicted_q_value)
+                y_i = []
+                for k in xrange(MINIBATCH_SIZE):
+                    if t_batch[k]:
+                        y_i.append(r_batch[k])
+                    else:
+                        y_i.append(r_batch[k] + GAMMA * target_q[k])
 
-                    # Update the actor policy using the sampled gradient
-                    a_outs = actor.predict(s_batch)                
-                    grads = critic.action_gradients(s_batch, a_outs)
-                    actor.train(s_batch, grads[0])
+                # Update the critic given the targets
+                predicted_q_value, _ = critic.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
+            
+                ep_ave_max_q += np.amax(predicted_q_value)
 
-                    # Update target networks
-                    actor.update_target_network()
-                    critic.update_target_network()
+                # Update the actor policy using the sampled gradient
+                a_outs = actor.predict(s_batch)                
+                grads = critic.action_gradients(s_batch, a_outs)
+                actor.train(s_batch, grads[0])
 
-                observation = new_observation
-                ep_reward += r[0]
+                # Update target networks
+                actor.update_target_network()
+                critic.update_target_network()
 
-                if terminal:
+            observation = new_observation
+            ep_reward += r[0]
 
-                    summary_str = sess.run(summary_ops, feed_dict={
-                        summary_vars[0]: ep_reward,
-                        summary_vars[1]: ep_ave_max_q / float(j+1)
-                    })
+            if done[0]: #episode done - completed task or ran outta time
 
-                    writer.add_summary(summary_str, i)
-                    writer.flush()
+                summary_str = sess.run(summary_ops, feed_dict={
+                    summary_vars[0]: ep_reward,
+                    summary_vars[1]: ep_ave_max_q / float(j+1)
+                })
 
-                    print '| Reward: %.2i' % int(ep_reward), " | Episode", i, \
-                        '| Qmax: %.4f' % (ep_ave_max_q / float(j+1))
+                writer.add_summary(summary_str, i)
+                writer.flush()
 
-                    break
+                print '| Reward: %.2i' % int(ep_reward), " | Episode", i, \
+                    '| Qmax: %.4f' % (ep_ave_max_q / float(j+1))
+
+                break
 
 with tf.Session() as sess:
     
