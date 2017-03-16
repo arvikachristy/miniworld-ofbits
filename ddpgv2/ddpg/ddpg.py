@@ -237,7 +237,7 @@ def build_summaries():
 # =========
 # Actions
 # =========
-max_dist = 100 #maximum distance per action
+max_dist = 10 #maximum distance per action
 
 #bounds for verification
 min_x = 10
@@ -245,38 +245,25 @@ max_x = min_x+160
 min_y = 125
 max_y = min_y+160
 
-#initialize angles probabilities array
-angles = []
-for i in range(360):
-    angles.append(np.random.randint(1,10)) 
-
-norm_a = [float(i)/sum(angles) for i in angles] #normalize the angle array
-
-#initialize distance probabilities array
-distances = []
-for i in range(max_dist):
-    distances.append(np.random.randint(1,10))
-
-norm_d = [float(i)/sum(distances) for i in distances] #normalize the distance array
-
-def choose_angle(): #choose a random angle between 0 and 359 degrees based on probabilities, returns in RADIANS
-    angle = np.random.choice(np.arange(0,360),p=norm_a)
+def scale_angle(magnitude): #choose a random angle between 0 and 359 degrees based on probabilities, returns in RADIANS
+    angle = magnitude*360
     angle = angle * (np.pi/180)
     return angle
 
-def choose_distance(): #choose a random distance between 0 and max distance based on probabilities
-    distance = np.random.choice(np.arange(0, max_dist),p=norm_d)
+def scale_distance(magnitude): #choose a random distance between 0 and max distance based on probabilities
+    distance = magnitude*max_dist
     return distance
 
-def move(xcoord, ycoord, distance, angle): #move coords (if within bounds) and click
+def move(xcoord, ycoord, distance, angle): #move (if within bounds) and return updated coords 
     xdist = distance * np.sin(angle)
     ydist = distance * np.cos(angle)
     print "Distance: ", distance
     print "Angle (in radians): ", angle
     print "Angle (in degrees): ", angle*(180/np.pi)
+    print "Current X: ", xcoord
+    print "Current Y: ", ycoord
     print "Xdist: ", xdist
     print "Ydist: ", ydist
-    
     #verification
     if(xdist>0):
         if(ydist>0):
@@ -300,11 +287,7 @@ def move(xcoord, ycoord, distance, angle): #move coords (if within bounds) and c
             if(xcoord+xdist>min_x and ycoord+ydist>min_y):
                 xcoord += xdist
                 ycoord += ydist
-
-
-    #click after moving, we can change this later to randomly change PointerEvents (with more probabilities, thus modelling clicking continuously)
-    action = click(xcoord,ycoord)
-    return action
+    return xcoord,ycoord
 
 def click(xcoord,ycoord):
     #click at x,y
@@ -335,13 +318,13 @@ def train(sess, env, actor, critic):
         ep_reward = 0
         ep_ave_max_q = 0
 
-        #initialize xcoord and ycoord randomly for each episode
+        #initialize randomly for each episode
         xcoord = np.random.randint(0, 160) + 10  
         ycoord = np.random.randint(0, 160) + 75 + 50 
-        
+        prev_am = [0]#previous action magnitude - angle only at the moment
         for j in xrange(MAX_EP_STEPS):
             env.render()
-            print "OBSERVATION? ", observation
+            #print "Overall observation: ", observation
             for ob in observation:
                 if ob is not None:
                     x = ob['vision']
@@ -350,19 +333,23 @@ def train(sess, env, actor, critic):
                     crop = [0,0]
                 print "Previous observation: ", crop
 
-
                 # Added exploration noise
                 noise = (1. / (1. + i + j))
-                #magnitude_a = actor.predict(np.reshape(crop, (1,2))) + noise
-                #print "magnitude_a", magnitude_a
-                #print "x, y array:", a
-                a=move(xcoord,ycoord,choose_distance(),choose_angle())
+                current_am = actor.predict(np.reshape(prev_am, (1,1))) + noise
+                print "current_am", current_am
+                prev_am=current_am
+
+                #current_dm = current_am[0]
+                current_anm = current_am[0]
+                xcoord,ycoord=move(xcoord,ycoord,max_dist,scale_angle(current_anm)) #get new x and ycoord, currently only moves fixed distance
+                a=click(xcoord,ycoord)
+                
                 new_observation, r, terminal, info = env.step(a)
                 print "chosen action: ", a
                 env.render()
 
-                # replay_buffer.add(np.reshape(observation, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, \
-                #     terminal, np.reshape(new_observation, (actor.s_dim,)))
+                replay_buffer.add(np.reshape(observation, (actor.s_dim,)), np.reshape(current_am, (actor.a_dim,)), r, \
+                    terminal, np.reshape(new_observation, (actor.s_dim,)))
 
                 # Keep adding experience to the memory until
                 # there are at least minibatch size samples
@@ -421,7 +408,7 @@ with tf.Session() as sess:
     # tf.set_random_seed(RANDOM_SEED)
     # env.seed(RANDOM_SEED)
 
-    state_dim = 3 #env.observation_space.shape[0]
+    state_dim = 1 #env.observation_space.shape[0]
     print "state_dim: ", state_dim
     action_dim = 1 #env.action_space.shape[0]
     print "action_dim: ", action_dim
