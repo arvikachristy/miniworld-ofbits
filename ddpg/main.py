@@ -93,13 +93,9 @@ def main():
     print "Observation space for ", experiment, ": ", env.observation_space
     print "Action space for ", experiment, ": ", env.action_space
     steps= env.spec.timestep_limit #steps per episode   
-    env.configure(remotes=1, fps=5,
-              vnc_driver='go', 
-              vnc_kwargs={'encoding': 'tight', 'compress_level': 90, 
-                          'fine_quality_level': 100, 'subsample_level': 0})
+    env.configure(remotes=1, fps=5,vnc_driver='go', vnc_kwargs={'encoding': 'tight', 'compress_level': 90, 'fine_quality_level': 100, 'subsample_level': 0})
     #assert isinstance(env.observation_space, Box), "observation space must be continuous"
     #assert isinstance(env.action_space, Box), "action space must be continuous"
-    
     #Randomly initialize critic,actor,target critic, target actor network  and replay buffer   
     agent = DDPG(env, is_batch_norm)
     num_states = 1 #env.observation_space.shape[0]
@@ -118,17 +114,24 @@ def main():
         print "==== Starting episode no:",i,"====","\n"
         reward_per_episode = 0
         observation = env.reset()
+        print "OBSERVATION: ", observation
         #initialize xcoord and ycoord randomly for each episode
         xcoord = np.random.randint(0, 160) + 10  
         ycoord = np.random.randint(0, 160) + 75 + 50 
         for t in xrange(steps):
             #rendering environment            
             env.render()
-            prevobv = observation
-            #print "Previous observation: ", prevobv
+            for ob in observation:
+                if ob is not None:
+                    x = ob['vision']
+                    crop = x[75:75+210, 10:10+160, :]
+                    print "Previous observation: ", crop
+                    print "Shape? ", crop.shape
+                else:
+                    crop=None
 
             ##Original code for action
-            # action = agent.evaluate_actor(np.reshape(x,[1,num_states])) #currently returning [ nan  nan  nan  nan  nan  nan]
+            # action = agent.evaluate_actor(np.reshape(prevobv,[1,num_states])) #currently returning [ nan  nan  nan  nan  nan  nan]
             # noise = exploration_noise.noise()
             # action = action[0] + noise #Select action according to current policy and exploration noise
             # print "Noise: ", noise
@@ -141,10 +144,9 @@ def main():
             observation,reward,done,info=env.step(action)
             env.render()
             print "Done?", done
-            #print "Current observation", observation[0]
 
             #add previous observation,current observation,action and reward to agent's experience memory
-            agent.add_experience(prevobv,observation,action,reward,done)
+            agent.add_experience(crop,observation,action,reward,done)
 
             #train critic and actor network
             if counter > 64: #why 64? Perhaps to account for initialiisation? 
