@@ -80,7 +80,7 @@ def updateTargetGraph(tfVars, tau):
         op_holder.append(tfVars[idx+total_vars/2].assign((var.value()*tau) + ((1-tau)*tfVars[idx+total_vars/2].value())))
     return op_holder
 
-def updateTarget(op_holder, sess):
+def updateTarget(sess, op_holder):
     for op in op_holder:
         sess.run(op)
 
@@ -191,7 +191,7 @@ def discountEpsilon(epsilon, step_drop, end_epsilon):
         epsilon -= step_drop
     return epsilon
 
-def trainQNs(mainQN, targetQN, trainBatch, batch_size, y, sess):
+def trainQNs(sess, mainQN, targetQN, trainBatch, batch_size, y):
     QOut1 = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:np.stack(trainBatch[:,3])})
     Q1 = chooseActionFromQOut(QOut1)
     Q2 = sess.run(targetQN.QOut,feed_dict={targetQN.imageIn:np.stack(trainBatch[:,3])})
@@ -229,7 +229,7 @@ def getOutputDirNames():
         tboard_path = agent_id + "-" + tboard_path_suffix
     return checkpoint_path, evaluation_path, tboard_path
 
-def loadModel(saver, checkpoint_path, sess):
+def loadModel(sess, saver, checkpoint_path):
     print 'Loading Model...'
     ckpt = tf.train.get_checkpoint_state(checkpoint_path)
     saver.restore(sess, ckpt.model_checkpoint_path)
@@ -307,10 +307,10 @@ misses = 0
 
 with tf.Session() as sess:
     if load_model:
-        loadModel(saver, checkpoint_path, sess)
+        loadModel(sess, saver, checkpoint_path)
     sess.run(init)
     total_t = sess.run(tf.contrib.framework.get_global_step())
-    updateTarget(targetOps, sess) #Set the target network to be equal to the primary network.
+    updateTarget(sess, targetOps) #Set the target network to be equal to the primary network.
     ep_num = 0
     # Center cursor and wait until state observation s is valid
     s, info, prevY, prevX, ep_num_offset = initEnvironment(env, save_history)
@@ -358,8 +358,8 @@ with tf.Session() as sess:
                 if total_steps % (update_freq) == 0:
                     trainBatch = myBuffer.sample(batch_size) #Get a random batch of experiences.
                     #Below we perform the Double-DQN update to the target Q-values
-                    trainQNs(mainQN, targetQN, trainBatch, batch_size, y, sess)
-                    updateTarget(targetOps,sess) #Set the target network to be equal to the primary network.
+                    trainQNs(sess, mainQN, targetQN, trainBatch, batch_size, y)
+                    updateTarget(sess, targetOps) #Set the target network to be equal to the primary network.
             rAll += r[0]
             
             if d[0] == True:
