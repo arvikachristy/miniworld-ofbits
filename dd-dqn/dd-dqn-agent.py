@@ -14,25 +14,66 @@ from ExperienceBuffer import ExperienceBuffer
 # DD-DQN implementation based on Arthur Juliani's tutorial "Simple Reinforcement Learning with Tensorflow Part 4: Deep Q-Networks and Beyond"
 
 class QLearner():
-  def __init__(self, h_size):
-    self.num_actions = 6
-    self.imageIn = tf.placeholder(shape=[None, 84, 32, 3], dtype=tf.float32)
+  def __init__(self, h_size, num_actions, zoom_to_cursor):
+    if zoom_to_cursor:
+        self.imageIn = tf.placeholder(shape=[None, 84, 32, 3], dtype=tf.float32)
 
-    self.conv1 = tf.contrib.layers.convolution2d( \
-        inputs=self.imageIn,num_outputs=32,kernel_size=[5,5],stride=[3,2],padding='VALID', biases_initializer=None)
-    self.conv2 = tf.contrib.layers.convolution2d( \
-        inputs=self.conv1,num_outputs=64,kernel_size=[5,4],stride=[3,2],padding='VALID', biases_initializer=None)
-    self.conv3 = tf.contrib.layers.convolution2d( \
-        inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[2,1],padding='VALID', biases_initializer=None)
-    self.conv4 = tf.contrib.layers.convolution2d( \
-        inputs=self.conv3,num_outputs=512,kernel_size=[3,3],stride=[2,2],padding='VALID', biases_initializer=None)
+        self.conv1 = tf.contrib.layers.convolution2d( \
+            inputs=self.imageIn,num_outputs=32,kernel_size=[5,5],stride=[3,2],padding='VALID', biases_initializer=None)
+        self.conv2 = tf.contrib.layers.convolution2d( \
+            inputs=self.conv1,num_outputs=64,kernel_size=[5,4],stride=[3,2],padding='VALID', biases_initializer=None)
+        self.conv3 = tf.contrib.layers.convolution2d( \
+            inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[2,1],padding='VALID', biases_initializer=None)
+        self.conv4 = tf.contrib.layers.convolution2d( \
+            inputs=self.conv3,num_outputs=512,kernel_size=[3,3],stride=[2,2],padding='VALID', biases_initializer=None)
+    else:
+        self.imageIn = tf.placeholder(shape=[None, 105, 80, 3], dtype=tf.float32)
+
+        self.conv1 = tf.contrib.layers.convolution2d( \
+            inputs=self.imageIn,
+            num_outputs=32,
+            kernel_size=[8,8],
+            stride=[4,4],
+            padding='VALID',
+            biases_initializer=None)
+        self.conv2 = tf.contrib.layers.convolution2d( \
+            inputs=self.conv1,
+            num_outputs=64,
+            kernel_size=[4,4],
+            stride=[2,2],
+            padding='VALID',
+            biases_initializer=None)
+        self.pool1 = tf.nn.max_pool( \
+            value=self.conv2,
+            ksize=[1,8,5,1],
+            strides=[1,1,1,1],
+            padding='VALID')
+        self.conv3 = tf.contrib.layers.convolution2d( \
+            inputs=self.pool1,
+            num_outputs=64,
+            kernel_size=[3,3],
+            stride=[1,1],
+            padding='VALID',
+            biases_initializer=None)
+        '''self.pool3 = tf.nn.max_pool( \
+            value=self.conv3,
+            ksize=[1,8,5,1],
+            strides=[1,1,1,1],
+            padding='VALID')'''
+        self.conv4 = tf.contrib.layers.convolution2d( \
+            inputs=self.conv3,#pool3,
+            num_outputs=1024,
+            kernel_size=[2,2],
+            stride=[2,2],
+            padding='VALID',
+            biases_initializer=None)
 
     # We take the output from the final convolutional layer and split it into separate
     # advantage and value streams.
     self.streamAC, self.streamVC = tf.split(self.conv4, num_or_size_splits=2, axis=3)
     self.streamA = tf.contrib.layers.flatten(self.streamAC)
     self.streamV = tf.contrib.layers.flatten(self.streamVC)
-    self.AW = tf.Variable(tf.random_normal([h_size/2, self.num_actions]))
+    self.AW = tf.Variable(tf.random_normal([h_size/2, num_actions]))
     self.VW = tf.Variable(tf.random_normal([h_size/2, 1]))
     self.Advantage = tf.matmul(self.streamA, self.AW)
     self.Value = tf.matmul(self.streamV, self.VW)
@@ -46,7 +87,7 @@ class QLearner():
     self.targetQ = tf.placeholder(shape=[None], dtype=tf.float32)
 
     self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
-    self.actions_onehot = tf.one_hot(self.actions, self.num_actions, dtype=tf.float32)
+    self.actions_onehot = tf.one_hot(self.actions, num_actions, dtype=tf.float32)
     
     self.Q = tf.reduce_sum(tf.multiply(self.QOut, self.actions_onehot), reduction_indices=1)
     
@@ -55,11 +96,15 @@ class QLearner():
     self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
     self.updateModel = self.trainer.minimize(self.loss)
 
-def processState(s, cursorY, cursorX):
+def processState(s, zoom_to_cursor, cursorY, cursorX):
     if s is not None and len(s) > 0 and s[0] is not None:
         if type(s[0]) == dict and 'vision' in s[0]:
             v = s[0]['vision']
             crop = v[75:75+210, 10:10+160, :]
+
+            if not zoom_to_cursor:
+                lowres = scipy.misc.imresize(crop, (105, 80, 3))
+                return lowres
 
             # divide by 5
             lowres = scipy.misc.imresize(crop, (42, 32, 3))
@@ -71,6 +116,8 @@ def processState(s, cursorY, cursorX):
 
             stacked = tf.stack([center, lowresT], axis=0)
             return tf.reshape(stacked, shape=[84, 32, 3]).eval()
+    if not zoom_to_cursor:
+        return np.zeros(shape=[105, 80, 3])
     return np.zeros(shape=[84, 32, 3])
 
 def updateTargetGraph(tfVars, tau):
@@ -84,7 +131,7 @@ def updateTarget(sess, op_holder):
     for op in op_holder:
         sess.run(op)
 
-def intToVNCAction(a, x, y):
+def intToVNCAction(a, include_stay, x, y):
     small_step = 5
     minY = 125
     maxY = 285
@@ -95,19 +142,19 @@ def intToVNCAction(a, x, y):
             universe.spaces.PointerEvent(x, y, 1),
             universe.spaces.PointerEvent(x, y, 0)], x, y
     elif a == 1:
-        return [universe.spaces.PointerEvent(x, y, 0)], x, y
-    elif a == 2:
         if y + small_step <= maxY:
             return [universe.spaces.PointerEvent(x, y + small_step, 0)], x, y + small_step
-    elif a == 3:
+    elif a == 2:
         if x + small_step <= maxX:
             return [universe.spaces.PointerEvent(x + small_step, y, 0)], x + small_step, y
-    elif a == 4:
+    elif a == 3:
         if y - small_step >= minY:
             return [universe.spaces.PointerEvent(x, y - small_step, 0)], x, y - small_step
-    elif a == 5:
+    elif a == 4:
         if x - small_step >= minX:
             return [universe.spaces.PointerEvent(x - small_step, y, 0)], x - small_step, y
+    elif a == 5 and include_stay:
+        return [universe.spaces.PointerEvent(x, y, 0)], x, y
     return [], x, y
 
 def getEpisodeNumber(info, prev):
@@ -142,11 +189,11 @@ def chooseActionFromQOut(QOut):
 def isValidObservation(s):
     return s is not None and len(s) > 0 and s[0] is not None and type(s[0]) == dict and 'vision' in s[0]
 
-def getValidObservation(env, prevX, prevY):
+def getValidObservation(env, zoom_to_cursor, prevX, prevY):
     s = None
     while not isValidObservation(s):
         s, r, d, info = env.step([[universe.spaces.PointerEvent(prevX, prevY, 0)]])
-    s = processState(s, prevY, prevX)
+    s = processState(s, zoom_to_cursor, prevY, prevX)
     return s
 
 def makeEnvironment():
@@ -247,13 +294,20 @@ start_epsilon = 1 # Starting chance of random action
 end_epsilon = 0.1 # Final chance of random action
 anneling_steps = 30000. # How many steps of training to reduce startE to endE.
 num_episodes = 7000 # How many episodes of game environment to train network with.
-pre_train_steps = 50000 # How many steps of random actions before training begins.
+pre_train_steps = 5000 # How many steps of random actions before training begins.
 h_size = 512 # The size of the final convolutional layer before splitting it into Advantage and Value streams.
 tau = 0.001 # Rate to update target network toward primary network
+num_actions = 6
 
 load_model = False # Whether to load a saved model.
 checkpoint_path, evaluation_path, tboard_path = getOutputDirNames()
 plot_vision = False # Plot the agent's view of the environment
+include_stay = False
+if not include_stay:
+    num_actions = 5
+zoom_to_cursor = False
+if not zoom_to_cursor:
+    h_size = 1024
 save_history = True # If true, write results to file. If false, render environment.
 tboard_summaries = True
 summary_print_freq = 10 # How often (in episodes) to print a summary
@@ -264,8 +318,8 @@ checkpoint_freq = 100 # How often (in episodes) to save a checkpoint of model pa
 env = makeEnvironment()
 
 tf.reset_default_graph()
-mainQN = QLearner(h_size)
-targetQN = QLearner(h_size)
+mainQN = QLearner(h_size, num_actions, zoom_to_cursor)
+targetQN = QLearner(h_size, num_actions, zoom_to_cursor)
 
 global_step = tf.Variable(0, name='global_step', trainable=False)
 init = tf.global_variables_initializer()
@@ -317,7 +371,7 @@ with tf.Session() as sess:
 
     while ep_num < num_episodes:
         episodeBuffer = ExperienceBuffer()
-        s = getValidObservation(env, prevX, prevY)
+        s = getValidObservation(env, zoom_to_cursor, prevX, prevY)
         s1 = s
         d = False
         rAll = 0
@@ -330,15 +384,18 @@ with tf.Session() as sess:
             step_num += 1
             #Choose an action by greedily (with e chance of random action) from the Q-network
             if np.random.rand(1) < epsilon or total_steps < pre_train_steps:
-                a_num = np.random.randint(0,6)
+                a_num = np.random.randint(0, num_actions)
             else:
                 QOut = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:[s]})[0]
                 print QOut
                 a_num = chooseActionFromQOut(QOut)
                 print step_num, 'Decided',
-                action_numbers = {0: 'CLICK', 1: 'STAY', 2: 'UP', 3: 'RIGHT', 4: 'DOWN', 5: 'LEFT'}
+                if include_stay:
+                    action_numbers = {0: 'CLICK', 1: 'UP', 2: 'RIGHT', 3: 'DOWN', 4: 'LEFT', 5: 'STAY'}
+                else:
+                    action_numbers = {0: 'CLICK', 1: 'UP', 2: 'RIGHT', 3: 'DOWN', 4: 'LEFT'}
                 print action_numbers[a_num]
-            a, prevX, prevY = intToVNCAction(a_num, prevX, prevY)
+            a, prevX, prevY = intToVNCAction(a_num, include_stay, prevX, prevY)
             s1, r, d, info = env.step([a])
             if type(s1) == tf.Tensor:
                 s1 = s1.eval()
@@ -346,7 +403,7 @@ with tf.Session() as sess:
                 s1, r, d, info = env.step([a])
             if not save_history:
                 env.render()
-            s1 = processState(s1, prevY, prevX)
+            s1 = processState(s1, zoom_to_cursor, prevY, prevX)
 
             if plot_vision:
                 plotVision(s1)
@@ -374,6 +431,7 @@ with tf.Session() as sess:
                     summary_writer.add_summary(episode_summary, total_t)
                     summary_writer.flush()
                     total_t += 1
+                    print 'Wrote to tboard', tboard_path
                 total_steps += step_num
                 print 'Steps taken this episode:', step_num
             s = s1
