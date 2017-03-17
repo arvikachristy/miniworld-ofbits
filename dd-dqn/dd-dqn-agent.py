@@ -271,9 +271,9 @@ def getOutputDirNames():
     # Add ID to output directory names to distinguish between runs
     if len(sys.argv) > 1:
         agent_id = str(sys.argv[1])
-        checkpoint_path = agent_id + "-" + checkpoint_path_suffix
-        evaluation_path = agent_id + "-" + evaluation_path_suffix
-        tboard_path = agent_id + "-" + tboard_path_suffix
+        checkpoint_path = checkpoint_path_suffix + "-" + agent_id
+        evaluation_path = evaluation_path_suffix + "-" + agent_id
+        tboard_path = tboard_path_suffix + "-" + agent_id
     return checkpoint_path, evaluation_path, tboard_path
 
 def loadModel(sess, saver, checkpoint_path):
@@ -292,7 +292,7 @@ update_freq = 4 # How often to perform a training step.
 y = .99 # Discount factor on the target Q-values
 start_epsilon = 1 # Starting chance of random action
 end_epsilon = 0.1 # Final chance of random action
-anneling_steps = 30000. # How many steps of training to reduce startE to endE.
+anneling_steps = 100000. # How many steps of training to reduce startE to endE.
 num_episodes = 7000 # How many episodes of game environment to train network with.
 pre_train_steps = 5000 # How many steps of random actions before training begins.
 h_size = 512 # The size of the final convolutional layer before splitting it into Advantage and Value streams.
