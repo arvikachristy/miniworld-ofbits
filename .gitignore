@@ -2,8 +2,11 @@
 
 # Agent evaluation and log files
 *evaluation
-*dqn-model
+evaluation-*
+*dqn-model*
+dqn-model-*
 *tboard
+tboard-*
 dd-dqn/reward.txt
 dd-dqn/average.txt
 
