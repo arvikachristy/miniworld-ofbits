@@ -1,5 +1,6 @@
 import gym
 import universe
+import math as math
 import numpy as np
 import tensorflow as tf
 import scipy.misc
@@ -7,10 +8,11 @@ import tensorflow.contrib.slim as slim
 import matplotlib.pyplot as plt
 import plotly.plotly as py
 import plotly.graph_objs as go
+import sys, os
 from skimage.feature import corner_harris, corner_subpix, corner_peaks, peak_local_max
 
 env = gym.make('wob.mini.ClickTest-v0')
-env.configure(remotes=1, fps=2,
+env.configure(remotes=1, fps=10,
               vnc_driver='go', 
               vnc_kwargs={'encoding': 'tight', 'compress_level': 0, 
                           'fine_quality_level': 100, 'subsample_level': 0})
@@ -21,21 +23,23 @@ def discount_rewards(r):
     discounted_r = np.zeros_like(r)
     running_add = 0
     for t in reversed(xrange(0, r.size)):
-        # print "discount", r, "ddfg", r[t]
+        #print "discount", r, "ddfg", r[t]
         get_reward = r[t]
         running_add = running_add * gamma + get_reward[0]
+        print "get rew", get_reward ,"and run add", running_add
         discounted_r[t] = running_add
+        # print discounted_r ,"dis"
     return discounted_r
 
 class agent():
     def __init__(self, lr, s_size,a_size,h_size):
-        print "Agent speaking:", lr, s_size,a_size,h_size
+        print "Agent speaking:", a_size
         #These lines established the feed-forward part of the network. The agent takes a state and produces an action.
         self.state_in= tf.placeholder(shape=[None,s_size],dtype=tf.float32)
         hidden = slim.fully_connected(self.state_in,h_size,biases_initializer=None,activation_fn=tf.nn.relu)
         self.output = slim.fully_connected(hidden,a_size,activation_fn=tf.nn.softmax,biases_initializer=None)
         self.chosen_action = tf.argmax(self.output,1)
-
+        self.debug = tf.shape(self.output)[0]
         #The next six lines establish the training proceedure. We feed the reward and chosen action into the network
         #to compute the loss, and use it to update the network.
         self.reward_holder = tf.placeholder(shape=[None],dtype=tf.float32)
@@ -57,10 +61,17 @@ class agent():
         optimizer = tf.train.AdamOptimizer(learning_rate=lr)
         self.update_batch = optimizer.apply_gradients(zip(self.gradient_holders,tvars))
 
-
-
 tf.reset_default_graph() #Clear the Tensorflow graph.
-                               
+               
+def getOutputGraph():
+    tboard_path_suffix = "tboard"
+    tboard_path = tboard_path_suffix
+    # Add ID to output directory names to distinguish between runs
+    if len(sys.argv) > 1:
+        agent_id = str(sys.argv[1])
+        tboard_path = tboard_path_suffix + "-" + agent_id
+    return tboard_path    
+
 
 def validObserv(s):
     return s is not None and len(s) > 0 and s[0] is not None and type(s[0]) == dict and 'vision' in s[0]
@@ -91,25 +102,33 @@ def doAction(a, x, y):
             return [universe.spaces.PointerEvent(x - small_step, y, 0)], x - small_step, y
     return [], x, y
 
+def rgb2gray(rgb):
+    r, g, b = rgb[:,:,0], rgb[:,:,1], rgb[:,:,2]
+    gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
+    return gray    
+
 def manipulateState(s, coordX,coordY):
     if s is not None and s[0] is not None:
         if type(s[0]) == dict and 'vision' in s[0]:
             vi = s[0]['vision']
             crop = vi[75:75+210, 10:10+160, :]
-
+            square = vi[75+50:75+50+160, 10:10+160, :] 
             # divide by 5
             # lowres = scipy.misc.imresize(crop, (42, 32, 3))
             # lowresT = tf.pack(lowres)
 
             #making it from RGB to grayscale
-            grey= np.mean(crop, axis=2)
-
+            grey = rgb2gray(square)
             coords = corner_peaks(corner_harris(grey), num_peaks=20, min_distance=5)
-
             print coords, "SUBPIX SIZE"
             coords_subpix = corner_subpix(grey, coords)
+
+            # if math.isnan(goal_y) or math.isnan(goal_x):
+            #  return []
+
+
             num_coords = coords.shape[0]
-            coords_array = np.zeros((20,2))
+            coords_array = np.zeros((1344,2))
 
             # center= np.mean(center, axis=1)
             
@@ -119,18 +138,28 @@ def manipulateState(s, coordX,coordY):
             # print tf.reshape(coords_subpix, shape=[1, -1]).eval(), "HOLO"
             coords_array[:num_coords, :]=coords
             return tf.reshape(coords_array, shape=[1, -1]).eval()
-    return np.zeros(shape=[1, 40])
+    return np.zeros(shape=[1,84*32])
 
-myAgent = agent(lr=1e-2,s_size=40,a_size=6,h_size=8) #Load the agent.
+
+myAgent = agent(lr=1e-2,s_size=84*32,a_size=6,h_size=8) #Load the agent.
 #s_sze is expecting one input coz its a flat vector (array), sp
-total_episodes = 10#Set total number of episodes to train agent on.
+total_episodes = 100#Set total number of episodes to train agent on.
 update_frequency = 1
+tboard_summaries = True
+tboard_path = getOutputGraph()
 
+global_step= tf.Variable(0, name='global_step', trainable=False)
 init = tf.global_variables_initializer()
+
+if tboard_summaries:
+    summary_writer = tf.summary.FileWriter(tboard_path)
+    if not os.path.exists(tboard_path):
+        os.makedirs(tboard_path)    
 
 # Launch the tensorflow graph
 with tf.Session() as sess:
     sess.run(init)
+    total_t = sess.run(tf.contrib.framework.get_global_step())
     i = 0
     total_reward = []
     total_lenght = []
@@ -139,9 +168,9 @@ with tf.Session() as sess:
     cur_episode = 0
     coordX = 80+10 
     coordY = 80+75+50
-    s = env.reset()
-    #starting cursor in the middle of the frame
     
+    #starting cursor in the middle of the frame
+
     s1,r,d,_ = env.step([[universe.spaces.PointerEvent(coordX, coordY)]])
     # while not validObserv(s):
     #     s1,r,d,_ = env.step([[universe.spaces.PointerEvent(coordX, coordY)]])
@@ -152,6 +181,7 @@ with tf.Session() as sess:
 
     end_rewards =0
     while i < total_episodes:
+        s = env.reset()
         cur_episode +=1
         running_reward = 0
         d = False
@@ -164,14 +194,24 @@ with tf.Session() as sess:
             completed_click+=1
             s = manipulateState(s, coordX, coordY)
             print "new state", s
+            print "ADDED NOW MY AGENT" , myAgent.output
             # while not validObserv(s):
             #     s1,r,d,_ = env.step([[universe.spaces.PointerEvent(coordX, coordY)]])            
             #Choose either a random action or one from our network.
+
+
             a_dist = sess.run(myAgent.output,feed_dict={myAgent.state_in:np.array(s)})
-            #a_dist = [[0.15,0.15,0.15,0.15,0.15,0.25]]
-            print "Agent speaking", myAgent.state_in
-            print a_dist, "adist 0"
-            a_dist = 0.5 * (a_dist + np.ones((1, 6)) / 6) #average uniform probability
+            bug1 = sess.run(myAgent.state_in,feed_dict={myAgent.state_in:np.array(s)})
+            bug = sess.run(myAgent.output,feed_dict={myAgent.state_in:np.array(s)})
+            # a_dist = [[0.15,0.15,0.15,0.15,0.15,0.25]]
+
+            print "ADDED NOW MY AGENT bug" , bug1
+            print "ADDED NOW MY AGENT TWO" , bug
+            a_dist = a_dist +1  
+            # print myAgent.output.eval(), "CHOSEN Aoutput"
+            print myAgent.chosen_action, "CHOSEN ACTio"
+            print "adist!0" ,a_dist
+            a_dist = 0.75 * (a_dist + np.ones((1, 6)) / 6) #average uniform probability
             print "adist!1" ,a_dist
             a_dist /= a_dist.sum()
             print "adist!2" ,a_dist
@@ -200,8 +240,10 @@ with tf.Session() as sess:
                 #Update the network.
                 ep_history = np.array(ep_history)
                 ep_history[:,2] = discount_rewards(ep_history[:,2])
+                print "HISTORY", ep_history[:,2]
                 feed_dict={myAgent.reward_holder:ep_history[:,2],
                         myAgent.action_holder:ep_history[:,1],myAgent.state_in:np.vstack(ep_history[:,0])}
+                print "FEED DOCK", feed_dict
                 grads = sess.run(myAgent.gradients, feed_dict=feed_dict)
                 for idx,grad in enumerate(grads):
                     gradBuffer[idx] += grad
@@ -211,6 +253,13 @@ with tf.Session() as sess:
                     _ = sess.run(myAgent.update_batch, feed_dict=feed_dict)
                     for ix,grad in enumerate(gradBuffer):
                         gradBuffer[ix] = grad * 0
+
+                if tboard_summaries:
+                    episode_summary = tf.Summary()
+                    episode_summary.value.add(simple_value=r[0], tag="Reward")
+                    summary_writer.add_summary(episode_summary, total_t)
+                    summary_writer.flush()
+                    total_t+=1                        
 
                 total_reward.append(running_reward)
                 # total_lenght.append(j)
