@@ -164,17 +164,17 @@ def intToVNCAction(a, include_stay, x, y):
             universe.spaces.PointerEvent(x, y, 1),
             universe.spaces.PointerEvent(x, y, 0)], x, y
     elif a == 1:
-        if y + small_step <= maxY:
-            return [universe.spaces.PointerEvent(x, y + small_step, 0)], x, y + small_step
-    elif a == 2:
-        if x + small_step <= maxX:
-            return [universe.spaces.PointerEvent(x + small_step, y, 0)], x + small_step, y
-    elif a == 3:
         if y - small_step >= minY:
             return [universe.spaces.PointerEvent(x, y - small_step, 0)], x, y - small_step
-    elif a == 4:
+    elif a == 2:
+        if y + small_step <= maxY:
+            return [universe.spaces.PointerEvent(x, y + small_step, 0)], x, y + small_step
+    elif a == 3:
         if x - small_step >= minX:
             return [universe.spaces.PointerEvent(x - small_step, y, 0)], x - small_step, y
+    elif a == 4:
+        if x + small_step <= maxX:
+            return [universe.spaces.PointerEvent(x + small_step, y, 0)], x + small_step, y
     elif a == 5 and include_stay:
         return [universe.spaces.PointerEvent(x, y, 0)], x, y
     return [], x, y
@@ -237,7 +237,7 @@ def getValidObservation(sess, env, zoom_to_cursor, include_rgb, include_prompt, 
     return s
 
 def makeEnvironment():
-    env = gym.make('wob.mini.ClickTest-v0')
+    env = gym.make('wob.mini.FocusText-v0')
     # automatically creates a local docker container
     env.configure(remotes=1, fps=10,
                   vnc_driver='go',
@@ -341,10 +341,11 @@ end_epsilon = 0.1 # Final chance of random action
 anneling_steps = 100000. # How many steps of training to reduce startE to endE.
 num_episodes = 7000 # How many episodes of game environment to train network with.
 pre_train_steps = 5000 # How many steps of random actions before training begins.
-pre_anneling_steps = 50000 # How many steps of training before decaying epsilon
+pre_anneling_steps = 0#50000 # How many steps of training before decaying epsilon
 h_size = 512 # The size of the final convolutional layer before splitting it into Advantage and Value streams.
 tau = 0.001 # Rate to update target network toward primary network
 num_actions = 6
+pos_reward_mult = 100
 
 load_model = False # Whether to load a saved model.
 checkpoint_path, evaluation_path, tboard_path = getOutputDirNames()
@@ -352,8 +353,11 @@ plot_vision = False # Plot the agent's view of the environment
 include_rgb = False # If true, use an RGB view as input. If false, convert to grayscale.
 include_prompt = False # If true, include yellow prompt in input.
 include_stay = False # Include STAY as an action
+include_horizontal_moves = False # Include LEFT and RIGHT as actions
 if not include_stay:
-    num_actions = 5
+    num_actions -= 1
+if not include_horizontal_moves:
+    num_actions -= 2
 zoom_to_cursor = False # Process the input to includ a zoomed-in view around the cursor
 if not zoom_to_cursor:
     h_size = 1024
@@ -442,10 +446,7 @@ with tf.Session() as sess:
                 print QOut
                 a_num = chooseActionFromQOut(QOut)
                 print step_num, 'Decided',
-                if include_stay:
-                    action_numbers = {0: 'CLICK', 1: 'UP', 2: 'RIGHT', 3: 'DOWN', 4: 'LEFT', 5: 'STAY'}
-                else:
-                    action_numbers = {0: 'CLICK', 1: 'UP', 2: 'RIGHT', 3: 'DOWN', 4: 'LEFT'}
+                action_numbers = {0: 'CLICK', 1: 'UP', 2: 'DOWN', 3: 'LEFT', 4: 'RIGHT', 5: 'STAY'}
                 print action_numbers[a_num]
             a, currentX, currentY = intToVNCAction(a_num, include_stay, prevX, prevY)
             s1, r, d, info = env.step([a])
@@ -457,13 +458,12 @@ with tf.Session() as sess:
                 #repeat_count += 1
                 #print repeat_count, 'times'
                 s1, r, d, info = env.step([a])
-            if not save_history:
-                env.render()
             s1 = processState(sess, s1, zoom_to_cursor, include_rgb, include_prompt, prevY, prevX)
-            if plot_vision:
-                plotVision(s1, include_rgb)
-
-            episodeBuffer.add(np.reshape(np.array([s,a_num,r[0],s1,d[0]]),[1,5])) #Save the experience to our episode buffer.
+            if r[0] > 0:
+                r_scaled = r[0]*pos_reward_mult
+            else:
+                r_scaled = [0]
+            episodeBuffer.add(np.reshape(np.array([s,a_num,r_scaled,s1,d[0]]),[1,5])) #Save the experience to our episode buffer.
             
             if total_steps > pre_train_steps:
                 if total_steps > pre_train_steps + pre_anneling_steps:
@@ -485,6 +485,9 @@ with tf.Session() as sess:
                     episode_summary.value.add(simple_value=r[0], tag="Reward")
                     episode_summary.value.add(simple_value=epsilon, tag="Epsilon")
                     episode_summary.value.add(simple_value=step_num, tag="Actions per episode")
+                    episode_summary.value.add(simple_value=successes/len(rewards), tag="Success-%")
+                    episode_summary.value.add(simple_value=fails/len(rewards), tag="Fail-%")
+                    episode_summary.value.add(simple_value=misses/len(rewards), tag="Miss-%")
                     summary_writer.add_summary(episode_summary, total_t)
                     summary_writer.flush()
                     total_t += 1
@@ -493,6 +496,10 @@ with tf.Session() as sess:
                 print 'Steps taken this episode:', step_num
             s = s1
             prevX, prevY = currentX, currentY
+            if not save_history:
+                env.render()
+            if plot_vision:
+                plotVision(s1, include_rgb)
         
         #Get all experiences from this episode and discount their rewards.
         myBuffer.add(episodeBuffer.buffer)
