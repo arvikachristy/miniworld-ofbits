@@ -4,6 +4,7 @@ import numpy as np
 import random
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import scipy.misc
 import os
 import sys
@@ -14,59 +15,44 @@ from ExperienceBuffer import ExperienceBuffer
 # DD-DQN implementation based on Arthur Juliani's tutorial "Simple Reinforcement Learning with Tensorflow Part 4: Deep Q-Networks and Beyond"
 
 class QLearner():
-  def __init__(self, h_size, num_actions, zoom_to_cursor):
+  def __init__(self, h_size, num_actions, zoom_to_cursor, include_rgb, include_prompt):
+    z = 1
+    if include_rgb:
+        z = 3
     if zoom_to_cursor:
-        self.imageIn = tf.placeholder(shape=[None, 84, 32, 3], dtype=tf.float32)
+        height = 64
+        if include_prompt:
+            height = 84
+        self.imageIn = tf.placeholder(shape=[None, height, 32, z], dtype=tf.float32)
 
+        # if include_prompt, 1 is added to the dimensions below to obtain desired output size
         self.conv1 = tf.contrib.layers.convolution2d( \
-            inputs=self.imageIn,num_outputs=32,kernel_size=[5,5],stride=[3,2],padding='VALID', biases_initializer=None)
+            inputs=self.imageIn,num_outputs=32,kernel_size=[5,5],stride=[2+include_prompt,2],padding='VALID', biases_initializer=None)
         self.conv2 = tf.contrib.layers.convolution2d( \
-            inputs=self.conv1,num_outputs=64,kernel_size=[5,4],stride=[3,2],padding='VALID', biases_initializer=None)
+            inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None)
         self.conv3 = tf.contrib.layers.convolution2d( \
             inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[2,1],padding='VALID', biases_initializer=None)
         self.conv4 = tf.contrib.layers.convolution2d( \
-            inputs=self.conv3,num_outputs=512,kernel_size=[3,3],stride=[2,2],padding='VALID', biases_initializer=None)
+            inputs=self.conv3,num_outputs=256,kernel_size=[3,3],stride=[2,2],padding='VALID', biases_initializer=None)
+
     else:
-        self.imageIn = tf.placeholder(shape=[None, 105, 80, 3], dtype=tf.float32)
+        height = 80
+        pool1_ksize_y = 5
+        if include_prompt:
+            height = 105
+            pool1_ksize_y = 8
+        self.imageIn = tf.placeholder(shape=[None, height, 80, z], dtype=tf.float32)
 
         self.conv1 = tf.contrib.layers.convolution2d( \
-            inputs=self.imageIn,
-            num_outputs=32,
-            kernel_size=[8,8],
-            stride=[4,4],
-            padding='VALID',
-            biases_initializer=None)
+            inputs=self.imageIn,num_outputs=32,kernel_size=[8,8],stride=[4,4],padding='VALID',biases_initializer=None)
         self.conv2 = tf.contrib.layers.convolution2d( \
-            inputs=self.conv1,
-            num_outputs=64,
-            kernel_size=[4,4],
-            stride=[2,2],
-            padding='VALID',
-            biases_initializer=None)
+            inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID',biases_initializer=None)
         self.pool1 = tf.nn.max_pool( \
-            value=self.conv2,
-            ksize=[1,8,5,1],
-            strides=[1,1,1,1],
-            padding='VALID')
+            value=self.conv2,ksize=[1,pool1_ksize_y,5,1],strides=[1,1,1,1],padding='VALID')
         self.conv3 = tf.contrib.layers.convolution2d( \
-            inputs=self.pool1,
-            num_outputs=64,
-            kernel_size=[3,3],
-            stride=[1,1],
-            padding='VALID',
-            biases_initializer=None)
-        '''self.pool3 = tf.nn.max_pool( \
-            value=self.conv3,
-            ksize=[1,8,5,1],
-            strides=[1,1,1,1],
-            padding='VALID')'''
+            inputs=self.pool1,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID',biases_initializer=None)
         self.conv4 = tf.contrib.layers.convolution2d( \
-            inputs=self.conv3,#pool3,
-            num_outputs=1024,
-            kernel_size=[2,2],
-            stride=[2,2],
-            padding='VALID',
-            biases_initializer=None)
+            inputs=self.conv3,num_outputs=1024,kernel_size=[2,2],stride=[2,2],padding='VALID',biases_initializer=None)
 
     # We take the output from the final convolutional layer and split it into separate
     # advantage and value streams.
@@ -96,29 +82,65 @@ class QLearner():
     self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
     self.updateModel = self.trainer.minimize(self.loss)
 
-def processState(s, zoom_to_cursor, cursorY, cursorX):
+def rgbToGrayscale(img):
+    h, w, _ = img.shape
+    gray = np.zeros(shape=[h, w, 1], dtype=np.uint8)
+    for y in range(h):
+        for x in range(w):
+            px = img[y][x]
+            gray[y, x] = int(0.299*px[0] + 0.587*px[1] + 0.114*px[2])
+    return gray
+
+def processState(sess, s, zoom_to_cursor, include_rgb, include_prompt, cursorY, cursorX):
     if s is not None and len(s) > 0 and s[0] is not None:
         if type(s[0]) == dict and 'vision' in s[0]:
             v = s[0]['vision']
             crop = v[75:75+210, 10:10+160, :]
+            width = 160
+            if include_prompt:
+                height = 210
+            else:
+                height = 160
+                crop = crop[50:, :, :]
 
             if not zoom_to_cursor:
-                lowres = scipy.misc.imresize(crop, (105, 80, 3))
-                return lowres
+                lowres = scipy.misc.imresize(crop, (height/2, width/2, 3))
+                if not include_rgb:
+                    # Convert to grayscale using weighted average
+                    lowres = rgbToGrayscale(lowres)
+                return lowres #/ 25.5
 
             # divide by 5
-            lowres = scipy.misc.imresize(crop, (42, 32, 3))
+            fifth_height = height/5
+            fifth_width = width/5
+            lowres = scipy.misc.imresize(crop, (fifth_height, fifth_width, 3))
+            crop = scipy.misc.imresize(crop, (height/2, width/2, 3))
+            if not include_rgb:
+                # Convert to grayscale using weighted average
+                crop = rgbToGrayscale(crop)
+                lowres = rgbToGrayscale(lowres)
             lowresT = tf.stack(lowres)
 
-            windowX = 32
-            windowY = 42
-            center = focusAtCursor(crop, cursorY, cursorX, windowY, windowX)
+            center = focusAtCursor(sess, crop, 1/2.0, cursorY, cursorX, fifth_height, fifth_width, include_rgb, include_prompt)
 
             stacked = tf.stack([center, lowresT], axis=0)
-            return tf.reshape(stacked, shape=[84, 32, 3]).eval()
-    if not zoom_to_cursor:
-        return np.zeros(shape=[105, 80, 3])
-    return np.zeros(shape=[84, 32, 3])
+            imgOut = tf.reshape(stacked, shape=[2*fifth_height, fifth_width, -1]).eval()
+            return imgOut #/ 25.5
+    # Return a zero ndarray with the appropriate dimensions
+    z = 1
+    if include_rgb:
+        z = 3
+    if zoom_to_cursor:
+        y = 32
+        x = 32
+        if include_prompt:
+            y = 42
+    else:
+        y = 80
+        x = 80
+        if include_prompt:
+            y = 105
+    return np.zeros(shape=[y, x, z])
 
 def updateTargetGraph(tfVars, tau):
     total_vars = len(tfVars)
@@ -132,7 +154,7 @@ def updateTarget(sess, op_holder):
         sess.run(op)
 
 def intToVNCAction(a, include_stay, x, y):
-    small_step = 5
+    small_step = 15
     minY = 125
     maxY = 285
     minX = 10
@@ -163,20 +185,38 @@ def getEpisodeNumber(info, prev):
     else:
         return prev
 
-def focusAtCursor(imageIn, cursorY, cursorX, windowY, windowX):
-    cursorX = cursorX - 10
-    cursorY = cursorY - 75
-    imageIn = tf.reshape(imageIn, shape=[-1, 210, 160, 3])
-    padded = tf.pad(tf.reshape(imageIn[0,:,:,:], shape=[210, 160, 3]),
+def focusAtCursor(sess, imageIn, scale_mult, cursorY, cursorX, windowY, windowX, include_rgb, include_prompt):
+    orig_cursorY = cursorY
+    cursorX = int(round((cursorX - 10) * scale_mult))
+    cursorY = int(round((cursorY - 75 - 50) * scale_mult))
+    #print 'cursorY, cursorX after scaling', cursorY, cursorX
+    #print 'windowY, windowX', windowY, windowX
+    height = int(round(160 * scale_mult))
+    width = int(round(160 * scale_mult))
+    if include_prompt:
+        height = int(round(210 * scale_mult))
+        cursorY = int(round((orig_cursorY - 75) * scale_mult))
+    z = 1
+    if include_rgb:
+        z = 3
+    imageIn = tf.reshape(imageIn, shape=[-1, height, width, z])
+    padded = tf.pad(tf.reshape(imageIn[0,:,:,:], shape=[height, width, z]),
                     [[windowY/2, windowY/2],[windowX/2, windowX/2],[0, 0]],
                     "CONSTANT")
+
     result = padded[cursorY:cursorY+windowY, cursorX:cursorX+windowX, :]
+
+    debug = False
+    if debug:
+        plotVision(padded.eval(), include_rgb)
+        plt.gca().add_patch(Rectangle((cursorX,cursorY), windowX, windowY, fill=False))
     return result
 
 def chooseActionFromSingleQOut(singleQOut):
     unique = np.unique(singleQOut)
+    print 'singleQOut', singleQOut, type(singleQOut)
     if len(unique) == 1:
-        return np.random(0, len(QOut))
+        return np.random(0, len(singleQOut))
     else:
         return np.argmax(singleQOut, 0)
 
@@ -189,17 +229,17 @@ def chooseActionFromQOut(QOut):
 def isValidObservation(s):
     return s is not None and len(s) > 0 and s[0] is not None and type(s[0]) == dict and 'vision' in s[0]
 
-def getValidObservation(env, zoom_to_cursor, prevX, prevY):
+def getValidObservation(sess, env, zoom_to_cursor, include_rgb, include_prompt, prevX, prevY):
     s = None
     while not isValidObservation(s):
         s, r, d, info = env.step([[universe.spaces.PointerEvent(prevX, prevY, 0)]])
-    s = processState(s, zoom_to_cursor, prevY, prevX)
+    s = processState(sess, s, zoom_to_cursor, include_rgb, include_prompt, prevY, prevX)
     return s
 
 def makeEnvironment():
     env = gym.make('wob.mini.ClickTest-v0')
     # automatically creates a local docker container
-    env.configure(remotes=1, fps=5,
+    env.configure(remotes=1, fps=10,
                   vnc_driver='go',
                   vnc_kwargs={'encoding': 'tight', 'compress_level': 0,
                               'fine_quality_level': 100, 'subsample_level': 0})
@@ -216,7 +256,7 @@ def initEnvironment(env, save_history):
         env.render()
     ep_num_offset = getEpisodeNumber(info, 0)
     print 'Offset:', ep_num_offset
-    return s, info, prevY, prevX, ep_num_offset
+    return s, info, prevX, prevY, ep_num_offset
 
 def epNumIsConstant(info, ep_num, ep_num_offset):
     return getEpisodeNumber(info, ep_num + ep_num_offset) == ep_num + ep_num_offset
@@ -240,6 +280,7 @@ def discountEpsilon(epsilon, step_drop, end_epsilon):
 
 def trainQNs(sess, mainQN, targetQN, trainBatch, batch_size, y):
     QOut1 = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:np.stack(trainBatch[:,3])})
+    print 'batch QOut1', QOut1, type(QOut1)
     Q1 = chooseActionFromQOut(QOut1)
     Q2 = sess.run(targetQN.QOut,feed_dict={targetQN.imageIn:np.stack(trainBatch[:,3])})
     end_multiplier = -(trainBatch[:,4] - 1)
@@ -281,9 +322,14 @@ def loadModel(sess, saver, checkpoint_path):
     ckpt = tf.train.get_checkpoint_state(checkpoint_path)
     saver.restore(sess, ckpt.model_checkpoint_path)
 
-def plotVision(s):
+def plotVision(s, include_rgb):
     plt.close()
-    plt.imshow(s)
+    if include_rgb:
+        plt.imshow(s)
+    else:
+        # Drop last dimension (of length 1)
+        s = s.reshape(s.shape[:-1])
+        plt.imshow(s, cmap='gray')
     plt.show(block=False)
 
 
@@ -295,6 +341,7 @@ end_epsilon = 0.1 # Final chance of random action
 anneling_steps = 100000. # How many steps of training to reduce startE to endE.
 num_episodes = 7000 # How many episodes of game environment to train network with.
 pre_train_steps = 5000 # How many steps of random actions before training begins.
+pre_anneling_steps = 50000 # How many steps of training before decaying epsilon
 h_size = 512 # The size of the final convolutional layer before splitting it into Advantage and Value streams.
 tau = 0.001 # Rate to update target network toward primary network
 num_actions = 6
@@ -302,14 +349,16 @@ num_actions = 6
 load_model = False # Whether to load a saved model.
 checkpoint_path, evaluation_path, tboard_path = getOutputDirNames()
 plot_vision = False # Plot the agent's view of the environment
-include_stay = False
+include_rgb = False # If true, use an RGB view as input. If false, convert to grayscale.
+include_prompt = False # If true, include yellow prompt in input.
+include_stay = False # Include STAY as an action
 if not include_stay:
     num_actions = 5
-zoom_to_cursor = False
+zoom_to_cursor = False # Process the input to includ a zoomed-in view around the cursor
 if not zoom_to_cursor:
     h_size = 1024
 save_history = True # If true, write results to file. If false, render environment.
-tboard_summaries = True
+tboard_summaries = True # If true, write summaries to file that can be shown in TensorBoard
 summary_print_freq = 10 # How often (in episodes) to print a summary
 summary_freq = 20 # How often (in episodes) to write a summary to a summary file
 checkpoint_freq = 100 # How often (in episodes) to save a checkpoint of model parameters
@@ -318,8 +367,8 @@ checkpoint_freq = 100 # How often (in episodes) to save a checkpoint of model pa
 env = makeEnvironment()
 
 tf.reset_default_graph()
-mainQN = QLearner(h_size, num_actions, zoom_to_cursor)
-targetQN = QLearner(h_size, num_actions, zoom_to_cursor)
+mainQN = QLearner(h_size, num_actions, zoom_to_cursor, include_rgb, include_prompt)
+targetQN = QLearner(h_size, num_actions, zoom_to_cursor, include_rgb, include_prompt)
 
 global_step = tf.Variable(0, name='global_step', trainable=False)
 init = tf.global_variables_initializer()
@@ -359,6 +408,8 @@ successes = 0
 fails = 0
 misses = 0
 
+#max_q = 0
+
 with tf.Session() as sess:
     if load_model:
         loadModel(sess, saver, checkpoint_path)
@@ -367,18 +418,19 @@ with tf.Session() as sess:
     updateTarget(sess, targetOps) #Set the target network to be equal to the primary network.
     ep_num = 0
     # Center cursor and wait until state observation s is valid
-    s, info, prevY, prevX, ep_num_offset = initEnvironment(env, save_history)
+    s, info, currentX, currentY, ep_num_offset = initEnvironment(env, save_history)
 
     while ep_num < num_episodes:
         episodeBuffer = ExperienceBuffer()
-        s = getValidObservation(env, zoom_to_cursor, prevX, prevY)
+        s = getValidObservation(sess, env, zoom_to_cursor, include_rgb, include_prompt, currentX, currentY)
+        prevX, prevY = currentX, currentY
         s1 = s
         d = False
         rAll = 0
         step_num = 0
         ep_num = getEpisodeNumber(info, ep_num + ep_num_offset) - ep_num_offset
         print '\n------ Episode', ep_num
-        print (prevX, prevY)
+        print (currentX, currentY)
         #The Q-Network
         while epNumIsConstant(info, ep_num, ep_num_offset):
             step_num += 1
@@ -395,22 +447,27 @@ with tf.Session() as sess:
                 else:
                     action_numbers = {0: 'CLICK', 1: 'UP', 2: 'RIGHT', 3: 'DOWN', 4: 'LEFT'}
                 print action_numbers[a_num]
-            a, prevX, prevY = intToVNCAction(a_num, include_stay, prevX, prevY)
+            a, currentX, currentY = intToVNCAction(a_num, include_stay, prevX, prevY)
             s1, r, d, info = env.step([a])
             if type(s1) == tf.Tensor:
                 s1 = s1.eval()
+            #repeat_count = 0
             while not isValidObservation(s1):
+                #print 'Repeated action',
+                #repeat_count += 1
+                #print repeat_count, 'times'
                 s1, r, d, info = env.step([a])
             if not save_history:
                 env.render()
-            s1 = processState(s1, zoom_to_cursor, prevY, prevX)
-
+            s1 = processState(sess, s1, zoom_to_cursor, include_rgb, include_prompt, prevY, prevX)
             if plot_vision:
-                plotVision(s1)
+                plotVision(s1, include_rgb)
+
             episodeBuffer.add(np.reshape(np.array([s,a_num,r[0],s1,d[0]]),[1,5])) #Save the experience to our episode buffer.
             
             if total_steps > pre_train_steps:
-                epsilon = discountEpsilon(epsilon, step_drop, end_epsilon)
+                if total_steps > pre_train_steps + pre_anneling_steps:
+                        epsilon = discountEpsilon(epsilon, step_drop, end_epsilon)
                 
                 if total_steps % (update_freq) == 0:
                     trainBatch = myBuffer.sample(batch_size) #Get a random batch of experiences.
@@ -431,10 +488,11 @@ with tf.Session() as sess:
                     summary_writer.add_summary(episode_summary, total_t)
                     summary_writer.flush()
                     total_t += 1
-                    print 'Wrote to tboard', tboard_path
+                    print 'Wrote to', tboard_path
                 total_steps += step_num
                 print 'Steps taken this episode:', step_num
             s = s1
+            prevX, prevY = currentX, currentY
         
         #Get all experiences from this episode and discount their rewards.
         myBuffer.add(episodeBuffer.buffer)
