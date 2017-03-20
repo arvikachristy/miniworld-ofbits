@@ -212,19 +212,26 @@ def focusAtCursor(sess, imageIn, scale_mult, cursorY, cursorX, windowY, windowX,
         plt.gca().add_patch(Rectangle((cursorX,cursorY), windowX, windowY, fill=False))
     return result
 
-def chooseActionFromSingleQOut(singleQOut):
+def softMax(xs):
+    e_xs = np.exp(xs - np.max(xs))
+    return e_xs / e_xs.sum()
+
+def chooseActionFromSingleQOut(singleQOut, use_probs):
     unique = np.unique(singleQOut)
     #print 'singleQOut', singleQOut, type(singleQOut)
     if len(unique) == 1:
         return np.random(0, len(singleQOut))
+    elif use_probs:
+        print singleQOut, softMax(singleQOut)
+        return np.random.choice(range(len(singleQOut)), p=softMax(singleQOut))
     else:
         return np.argmax(singleQOut, 0)
 
-def chooseActionFromQOut(QOut):
+def chooseActionFromQOut(QOut, use_probs):
     if QOut.ndim == 1:
-        return chooseActionFromSingleQOut(QOut)
+        return chooseActionFromSingleQOut(QOut, use_probs)
     else:
-        return [chooseActionFromSingleQOut(q) for q in QOut]
+        return [chooseActionFromSingleQOut(q, use_probs) for q in QOut]
 
 def isValidObservation(s):
     return s is not None and len(s) > 0 and s[0] is not None and type(s[0]) == dict and 'vision' in s[0]
@@ -264,13 +271,14 @@ def epNumIsConstant(info, ep_num, ep_num_offset):
 def addReward(r, ep_num, rewards, successes, fails, misses):
     if r == 0:
         misses += 1
+        print 'Miss'
     elif r > 0:
         successes += 1
         print 'Success'
     else:
         fails += 1
+        print 'Fail'
     rewards.append([ep_num, r])
-    rewards = rewards[-100:]
     return rewards, successes, fails, misses
 
 def discountEpsilon(epsilon, step_drop, end_epsilon):
@@ -278,10 +286,10 @@ def discountEpsilon(epsilon, step_drop, end_epsilon):
         epsilon -= step_drop
     return epsilon
 
-def trainQNs(sess, mainQN, targetQN, trainBatch, batch_size, y):
+def trainQNs(sess, mainQN, targetQN, probabilistic_policy, trainBatch, batch_size, y):
     QOut1 = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:np.stack(trainBatch[:,3])})
     #print 'batch QOut1', QOut1, type(QOut1)
-    Q1 = chooseActionFromQOut(QOut1)
+    Q1 = chooseActionFromQOut(QOut1, probabilistic_policy)
     Q2 = sess.run(targetQN.QOut,feed_dict={targetQN.imageIn:np.stack(trainBatch[:,3])})
     end_multiplier = -(trainBatch[:,4] - 1)
     doubleQ = Q2[range(batch_size),Q1]
@@ -300,7 +308,7 @@ def printSummary(stepList, rList, e, rewards, successes, fails, misses):
     'Fails:', fails, ':', float(fails)/len(rList), '\t', \
     'Misses:', misses, ':', float(misses)/len(rList), '\t' \
     'avg steps/episode (last 100):', np.mean(stepList[-100:]), '(last 10)', np.mean(stepList[-10:])
-    print 'Rewards', rewards
+    print 'Rewards', rewards[-100:]
 
 def getOutputDirNames():
     checkpoint_path_suffix = "dqn-model"
@@ -352,6 +360,7 @@ checkpoint_path, evaluation_path, tboard_path = getOutputDirNames()
 plot_vision = False # Plot the agent's view of the environment
 include_rgb = False # If true, use an RGB view as input. If false, convert to grayscale.
 include_prompt = False # If true, include yellow prompt in input.
+probabilistic_policy = True # If true, Q-function defines a probability distribution
 include_stay = False # Include STAY as an action
 include_horizontal_moves = False # Include LEFT and RIGHT as actions
 if not include_stay:
@@ -444,10 +453,10 @@ with tf.Session() as sess:
                 a_num = np.random.randint(0, num_actions)
             else:
                 QOut = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:[s]})[0]
-                #Value = sess.run(mainQN.Value,feed_dict={mainQN.imageIn:[s]})[0]
-                #Advantage = sess.run(mainQN.Advantage, feed_dict={mainQN.imageIn:[s]})[0]
-                print QOut
-                a_num = chooseActionFromQOut(QOut)
+                Value = sess.run(mainQN.Value,feed_dict={mainQN.imageIn:[s]})[0]
+                Advantage = sess.run(mainQN.Advantage, feed_dict={mainQN.imageIn:[s]})[0]
+                print QOut, 'V', Value, 'A', Advantage
+                a_num = chooseActionFromQOut(QOut, probabilistic_policy)
                 print step_num, 'Decided',
                 action_numbers = {0: 'CLICK', 1: 'UP', 2: 'DOWN', 3: 'LEFT', 4: 'RIGHT', 5: 'STAY'}
                 print action_numbers[a_num]
@@ -463,7 +472,7 @@ with tf.Session() as sess:
                 s1, r, d, info = env.step([a])
             s1 = processState(sess, s1, zoom_to_cursor, include_rgb, include_prompt, prevY, prevX)
             if r[0] > 0:
-                r_scaled = r[0]*pos_reward_mult
+                r_scaled = r[0]#*pos_reward_mult
             else:
                 r_scaled = r[0]#-1#
             episodeBuffer.add(np.reshape(np.array([s,a_num,r_scaled,s1,d[0]]),[1,5])) #Save the experience to our episode buffer.
@@ -476,7 +485,7 @@ with tf.Session() as sess:
                     num_training_steps += 1
                     trainBatch = myBuffer.sample(batch_size) #Get a random batch of experiences.
                     #Below we perform the Double-DQN update to the target Q-values
-                    trainQNs(sess, mainQN, targetQN, trainBatch, batch_size, y)
+                    trainQNs(sess, mainQN, targetQN, probabilistic_policy, trainBatch, batch_size, y)
                     updateTarget(sess, targetOps) #Set the target network to be equal to the primary network.
             rAll += r[0]
             
