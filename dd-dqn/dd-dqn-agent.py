@@ -214,7 +214,7 @@ def focusAtCursor(sess, imageIn, scale_mult, cursorY, cursorX, windowY, windowX,
 
 def chooseActionFromSingleQOut(singleQOut):
     unique = np.unique(singleQOut)
-    print 'singleQOut', singleQOut, type(singleQOut)
+    #print 'singleQOut', singleQOut, type(singleQOut)
     if len(unique) == 1:
         return np.random(0, len(singleQOut))
     else:
@@ -280,7 +280,7 @@ def discountEpsilon(epsilon, step_drop, end_epsilon):
 
 def trainQNs(sess, mainQN, targetQN, trainBatch, batch_size, y):
     QOut1 = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:np.stack(trainBatch[:,3])})
-    print 'batch QOut1', QOut1, type(QOut1)
+    #print 'batch QOut1', QOut1, type(QOut1)
     Q1 = chooseActionFromQOut(QOut1)
     Q2 = sess.run(targetQN.QOut,feed_dict={targetQN.imageIn:np.stack(trainBatch[:,3])})
     end_multiplier = -(trainBatch[:,4] - 1)
@@ -338,7 +338,7 @@ update_freq = 4 # How often to perform a training step.
 y = .99 # Discount factor on the target Q-values
 start_epsilon = 1 # Starting chance of random action
 end_epsilon = 0.1 # Final chance of random action
-anneling_steps = 100000. # How many steps of training to reduce startE to endE.
+anneling_steps = 300000. # How many steps of training to reduce startE to endE.
 num_episodes = 7000 # How many episodes of game environment to train network with.
 pre_train_steps = 5000 # How many steps of random actions before training begins.
 pre_anneling_steps = 0#50000 # How many steps of training before decaying epsilon
@@ -407,6 +407,7 @@ step_drop = (start_epsilon - end_epsilon)/anneling_steps
 stepList = []
 rList = []
 total_steps = 0
+num_training_steps = 0
 
 successes = 0
 fails = 0
@@ -443,6 +444,8 @@ with tf.Session() as sess:
                 a_num = np.random.randint(0, num_actions)
             else:
                 QOut = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:[s]})[0]
+                #Value = sess.run(mainQN.Value,feed_dict={mainQN.imageIn:[s]})[0]
+                #Advantage = sess.run(mainQN.Advantage, feed_dict={mainQN.imageIn:[s]})[0]
                 print QOut
                 a_num = chooseActionFromQOut(QOut)
                 print step_num, 'Decided',
@@ -462,14 +465,15 @@ with tf.Session() as sess:
             if r[0] > 0:
                 r_scaled = r[0]*pos_reward_mult
             else:
-                r_scaled = [0]
+                r_scaled = r[0]#-1#
             episodeBuffer.add(np.reshape(np.array([s,a_num,r_scaled,s1,d[0]]),[1,5])) #Save the experience to our episode buffer.
             
             if total_steps > pre_train_steps:
                 if total_steps > pre_train_steps + pre_anneling_steps:
                         epsilon = discountEpsilon(epsilon, step_drop, end_epsilon)
                 
-                if total_steps % (update_freq) == 0:
+                if total_steps + step_num % (update_freq) == 0:
+                    num_training_steps += 1
                     trainBatch = myBuffer.sample(batch_size) #Get a random batch of experiences.
                     #Below we perform the Double-DQN update to the target Q-values
                     trainQNs(sess, mainQN, targetQN, trainBatch, batch_size, y)
@@ -477,23 +481,28 @@ with tf.Session() as sess:
             rAll += r[0]
             
             if d[0] == True:
-                rewards, successes, fails, misses = addReward(r[0], ep_num, rewards, successes, fails, misses)
-                if save_history:
-                    history_writer.saveEpisode(ep_num, r[0])
-                if tboard_summaries:
-                    episode_summary = tf.Summary()
-                    episode_summary.value.add(simple_value=r[0], tag="Reward")
-                    episode_summary.value.add(simple_value=epsilon, tag="Epsilon")
-                    episode_summary.value.add(simple_value=step_num, tag="Actions per episode")
-                    episode_summary.value.add(simple_value=successes/len(rewards), tag="Success-%")
-                    episode_summary.value.add(simple_value=fails/len(rewards), tag="Fail-%")
-                    episode_summary.value.add(simple_value=misses/len(rewards), tag="Miss-%")
-                    summary_writer.add_summary(episode_summary, total_t)
-                    summary_writer.flush()
-                    total_t += 1
-                    print 'Wrote to', tboard_path
                 total_steps += step_num
                 print 'Steps taken this episode:', step_num
+                if r[0] == 0:
+                    ep_num_offset += 1
+                else:
+                    rewards, successes, fails, misses = addReward(r[0], ep_num, rewards, successes, fails, misses)
+                    if save_history:
+                        history_writer.saveEpisode(ep_num, r[0])
+                    if tboard_summaries:
+                        episode_summary = tf.Summary()
+                        episode_summary.value.add(simple_value=r[0], tag="Reward")
+                        episode_summary.value.add(simple_value=epsilon, tag="Epsilon")
+                        episode_summary.value.add(simple_value=total_steps, tag="Total steps")
+                        episode_summary.value.add(simple_value=num_training_steps, tag="Total training steps")
+                        episode_summary.value.add(simple_value=step_num, tag="Actions per episode")
+                        episode_summary.value.add(simple_value=float(successes)/len(rewards), tag="Success-%")
+                        episode_summary.value.add(simple_value=float(fails)/len(rewards), tag="Fail-%")
+                        episode_summary.value.add(simple_value=float(misses)/len(rewards), tag="Miss-%")
+                        summary_writer.add_summary(episode_summary, total_t)
+                        summary_writer.flush()
+                        total_t += 1
+                        print 'Wrote to', tboard_path
             s = s1
             prevX, prevY = currentX, currentY
             if not save_history:
