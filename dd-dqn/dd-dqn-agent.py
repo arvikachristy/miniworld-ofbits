@@ -244,7 +244,7 @@ def getValidObservation(sess, env, zoom_to_cursor, include_rgb, include_prompt, 
     return s
 
 def makeEnvironment():
-    env = gym.make('wob.mini.FocusText-v0')
+    env = gym.make('wob.mini.ClickTest-v0')
     # automatically creates a local docker container
     env.configure(remotes=1, fps=10,
                   vnc_driver='go',
@@ -349,7 +349,7 @@ end_epsilon = 0.1 # Final chance of random action
 anneling_steps = 300000. # How many steps of training to reduce startE to endE.
 num_episodes = 7000 # How many episodes of game environment to train network with.
 pre_train_steps = 5000 # How many steps of random actions before training begins.
-pre_anneling_steps = 0#50000 # How many steps of training before decaying epsilon
+pre_anneling_steps = 50000 # How many steps of training before decaying epsilon
 h_size = 512 # The size of the final convolutional layer before splitting it into Advantage and Value streams.
 tau = 0.001 # Rate to update target network toward primary network
 num_actions = 6
@@ -362,7 +362,7 @@ include_rgb = False # If true, use an RGB view as input. If false, convert to gr
 include_prompt = False # If true, include yellow prompt in input.
 probabilistic_policy = True # If true, Q-function defines a probability distribution
 include_stay = False # Include STAY as an action
-include_horizontal_moves = False # Include LEFT and RIGHT as actions
+include_horizontal_moves = True # Include LEFT and RIGHT as actions
 if not include_stay:
     num_actions -= 1
 if not include_horizontal_moves:
@@ -483,6 +483,7 @@ with tf.Session() as sess:
                 
                 if total_steps + step_num % (update_freq) == 0:
                     num_training_steps += 1
+                    print 'Training step'
                     trainBatch = myBuffer.sample(batch_size) #Get a random batch of experiences.
                     #Below we perform the Double-DQN update to the target Q-values
                     trainQNs(sess, mainQN, targetQN, probabilistic_policy, trainBatch, batch_size, y)
