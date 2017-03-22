@@ -99,12 +99,13 @@ class MiniWorldDDPGAgent(DDPGAgent):
                         while info.get('env_status.env_state') is None:
                             observation, r, done, info = env.step(
                                 self._convert_action(action))
+
                             env.render()
                         observation = deepcopy(observation)
                         if self.processor is not None:
-                            observation, reward, done, info = \
-                                self.processor.process_step(
-                                    observation, reward, done, info)
+                            observation = \
+                                self.processor.process_observation(observation)
+                            reward = self.processor.process_reward(reward)
                             done = done[0]
                         callbacks.on_action_end(action)
                         if done:
@@ -135,10 +136,12 @@ class MiniWorldDDPGAgent(DDPGAgent):
                     observation, r, done, info = env.step(
                         self._convert_action(action))
                     env.render()
-                    while info.get('env_status.env_state') is None:
-                        observation, r, done, info = env.step(
-                            self._convert_action(action))
-                        env.render()
+                    # while info.get('n')[0].get('env_status.env_state') is None:
+                    #     observation, r, done, info = env.step(
+                    #         self._convert_action(action))
+                    #     print(info)
+                    #     print(info.get('env_status.env_state'))
+                    #     env.render()
                     observation = deepcopy(observation)
                     if self.processor is not None:
                         observation, r, done, info = self.processor.process_step(
@@ -202,11 +205,12 @@ class MiniWorldProcessor(Processor):
                 crop = x[125:125 + 160, 10:10 + 160, :]
             else:
                 crop = np.zeros((160, 160, 3))
-        return np.array(crop).astype('uint8')
+        crop = (255. - np.array(crop)) / 255
+        return crop
 
-    def process_state_batch(self, batch):
-        processed_batch = batch.astype('float32') / 255.
-        return processed_batch
+    # def process_state_batch(self, batch):
+    #     processed_batch = batch.astype('float32') / 255.
+    #     return processed_batch
 
     def process_reward(self, reward):
         print(reward)
