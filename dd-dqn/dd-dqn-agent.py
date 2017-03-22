@@ -154,7 +154,7 @@ def updateTarget(sess, op_holder):
         sess.run(op)
 
 def intToVNCAction(a, include_stay, x, y):
-    small_step = 15
+    small_step = 10
     minY = 125
     maxY = 285
     minX = 10
@@ -216,18 +216,18 @@ def softMax(xs):
     e_xs = np.exp(xs - np.max(xs))
     return e_xs / e_xs.sum()
 
-def chooseActionFromSingleQOut(singleQOut, use_probs):
+def chooseActionFromSingleQOut(singleQOut, use_probs, print_softmax):
     unique = np.unique(singleQOut)
-    #print 'singleQOut', singleQOut, type(singleQOut)
     if len(unique) == 1:
         return np.random(0, len(singleQOut))
     elif use_probs:
-        print singleQOut, softMax(singleQOut)
+        if print_softmax:
+            print 'softmax', softMax(singleQOut), '\n'
         return np.random.choice(range(len(singleQOut)), p=softMax(singleQOut))
     else:
         return np.argmax(singleQOut, 0)
 
-def chooseActionFromQOut(QOut, use_probs):
+def chooseActionFromQOut(QOut, use_probs, print_softmax):
     if QOut.ndim == 1:
         return chooseActionFromSingleQOut(QOut, use_probs)
     else:
@@ -243,10 +243,10 @@ def getValidObservation(sess, env, zoom_to_cursor, include_rgb, include_prompt, 
     s = processState(sess, s, zoom_to_cursor, include_rgb, include_prompt, prevY, prevX)
     return s
 
-def makeEnvironment():
-    env = gym.make('wob.mini.ClickTest-v0')
+def makeEnvironment(env_name):
+    env = gym.make(env_name)
     # automatically creates a local docker container
-    env.configure(remotes=1, fps=10,
+    env.configure(remotes=1, fps=15,
                   vnc_driver='go',
                   vnc_kwargs={'encoding': 'tight', 'compress_level': 0,
                               'fine_quality_level': 100, 'subsample_level': 0})
@@ -286,10 +286,9 @@ def discountEpsilon(epsilon, step_drop, end_epsilon):
         epsilon -= step_drop
     return epsilon
 
-def trainQNs(sess, mainQN, targetQN, probabilistic_policy, trainBatch, batch_size, y):
+def trainQNs(sess, mainQN, targetQN, stochastic_policy, trainBatch, batch_size, y):
     QOut1 = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:np.stack(trainBatch[:,3])})
-    #print 'batch QOut1', QOut1, type(QOut1)
-    Q1 = chooseActionFromQOut(QOut1, probabilistic_policy)
+    Q1 = chooseActionFromQOut(QOut1, stochastic_policy, print_softmax=False)
     Q2 = sess.run(targetQN.QOut,feed_dict={targetQN.imageIn:np.stack(trainBatch[:,3])})
     end_multiplier = -(trainBatch[:,4] - 1)
     doubleQ = Q2[range(batch_size),Q1]
@@ -341,6 +340,7 @@ def plotVision(s, include_rgb):
     plt.show(block=False)
 
 
+env_name = 'wob.mini.ClickTest-v0'
 batch_size = 32 # How many experiences to use for each training step.
 update_freq = 4 # How often to perform a training step.
 y = .99 # Discount factor on the target Q-values
@@ -360,7 +360,7 @@ checkpoint_path, evaluation_path, tboard_path = getOutputDirNames()
 plot_vision = False # Plot the agent's view of the environment
 include_rgb = False # If true, use an RGB view as input. If false, convert to grayscale.
 include_prompt = False # If true, include yellow prompt in input.
-probabilistic_policy = True # If true, Q-function defines a probability distribution
+stochastic_policy = True # If true, Q-function defines a probability distribution
 include_stay = False # Include STAY as an action
 include_horizontal_moves = True # Include LEFT and RIGHT as actions
 if not include_stay:
@@ -377,7 +377,7 @@ summary_freq = 20 # How often (in episodes) to write a summary to a summary file
 checkpoint_freq = 100 # How often (in episodes) to save a checkpoint of model parameters
 
 
-env = makeEnvironment()
+env = makeEnvironment(env_name)
 
 tf.reset_default_graph()
 mainQN = QLearner(h_size, num_actions, zoom_to_cursor, include_rgb, include_prompt)
@@ -456,7 +456,7 @@ with tf.Session() as sess:
                 Value = sess.run(mainQN.Value,feed_dict={mainQN.imageIn:[s]})[0]
                 Advantage = sess.run(mainQN.Advantage, feed_dict={mainQN.imageIn:[s]})[0]
                 print QOut, 'V', Value, 'A', Advantage
-                a_num = chooseActionFromQOut(QOut, probabilistic_policy)
+                a_num = chooseActionFromQOut(QOut, stochastic_policy, print_softmax=True)
                 print step_num, 'Decided',
                 action_numbers = {0: 'CLICK', 1: 'UP', 2: 'DOWN', 3: 'LEFT', 4: 'RIGHT', 5: 'STAY'}
                 print action_numbers[a_num]
@@ -464,11 +464,7 @@ with tf.Session() as sess:
             s1, r, d, info = env.step([a])
             if type(s1) == tf.Tensor:
                 s1 = s1.eval()
-            #repeat_count = 0
             while not isValidObservation(s1):
-                #print 'Repeated action',
-                #repeat_count += 1
-                #print repeat_count, 'times'
                 s1, r, d, info = env.step([a])
             s1 = processState(sess, s1, zoom_to_cursor, include_rgb, include_prompt, prevY, prevX)
             if r[0] > 0:
@@ -480,20 +476,19 @@ with tf.Session() as sess:
             if total_steps > pre_train_steps:
                 if total_steps > pre_train_steps + pre_anneling_steps:
                         epsilon = discountEpsilon(epsilon, step_drop, end_epsilon)
-                
-                if total_steps + step_num % (update_freq) == 0:
+                if (total_steps + step_num) % (update_freq) == 0:
                     num_training_steps += 1
-                    print 'Training step'
+                    #print 'Training step'
                     trainBatch = myBuffer.sample(batch_size) #Get a random batch of experiences.
                     #Below we perform the Double-DQN update to the target Q-values
-                    trainQNs(sess, mainQN, targetQN, probabilistic_policy, trainBatch, batch_size, y)
+                    trainQNs(sess, mainQN, targetQN, stochastic_policy, trainBatch, batch_size, y)
                     updateTarget(sess, targetOps) #Set the target network to be equal to the primary network.
             rAll += r[0]
             
             if d[0] == True:
                 total_steps += step_num
                 print 'Steps taken this episode:', step_num
-                if r[0] == 0:
+                if r[0] == 0 or abs(r[0]) > 1:
                     ep_num_offset += 1
                 else:
                     rewards, successes, fails, misses = addReward(r[0], ep_num, rewards, successes, fails, misses)
