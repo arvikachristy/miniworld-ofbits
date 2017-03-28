@@ -44,7 +44,8 @@ class QLearner():
             height = 105
             pool1_ksize_y = 8
         self.imageIn = tf.placeholder(shape=[None, height, 80, z], dtype=tf.float32)
-
+        print self.imageIn
+        '''
         self.conv1 = tf.contrib.layers.convolution2d( \
             inputs=self.imageIn,num_outputs=32,kernel_size=[8,8],stride=[4,4],padding='VALID',biases_initializer=None)
         self.conv2 = tf.contrib.layers.convolution2d( \
@@ -55,10 +56,24 @@ class QLearner():
             inputs=self.pool1,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID',biases_initializer=None)
         self.conv4 = tf.contrib.layers.convolution2d( \
             inputs=self.conv3,num_outputs=1024,kernel_size=[2,2],stride=[2,2],padding='VALID',biases_initializer=None)
+        '''
+        # Network architecture from DeepMind:
+        self.conv1 = tf.contrib.layers.convolution2d( \
+            inputs=self.imageIn,num_outputs=32,kernel_size=[8,8],stride=[4,4],padding='VALID',biases_initializer=None)
+        print self.conv1
+        self.conv2 = tf.contrib.layers.convolution2d( \
+            inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID',biases_initializer=None)
+        print self.conv2
+        self.conv3 = tf.contrib.layers.convolution2d( \
+            inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID',biases_initializer=None)
+        self.fc1 = tf.contrib.layers.fully_connected( \
+            inputs=self.conv3,num_outputs=512,activation_fn=tf.nn.relu)
+        #self.fc2 = tf.contrib.layers.fully_connected( \
+        #    inputs=self.fc1,num_outputs=,activation=None)
 
     # We take the output from the final convolutional layer and split it into separate
     # advantage and value streams.
-    self.streamAC, self.streamVC = tf.split(self.conv4, num_or_size_splits=2, axis=3)
+    self.streamAC, self.streamVC = tf.split(self.fc1, num_or_size_splits=2, axis=3)
     self.streamA = tf.contrib.layers.flatten(self.streamAC)
     self.streamV = tf.contrib.layers.flatten(self.streamVC)
     self.AW = tf.Variable(tf.random_normal([h_size/2, num_actions]))
@@ -245,7 +260,6 @@ def getValidObservation(env, prevX, prevY):
     return s
 
 def makeEnvironment(env_name):
-    print 'wot is going on'
     env = gym.make(env_name)
     # automatically creates a local docker container
     env.configure(remotes=1, fps=15,
@@ -256,7 +270,6 @@ def makeEnvironment(env_name):
 
 def initEnvironment(env, save_history):
     s = env.reset()
-    print 'Reset env'
     prevY = 80+75+50
     prevX = 80+10
     s, r, d, info = env.step([[universe.spaces.PointerEvent(prevX, prevY, 0)]])
