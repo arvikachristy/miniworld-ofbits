@@ -28,7 +28,7 @@ def forward(ob):
   crop = x[75:75+50+160, 10:10+160, :]               # miniwob coordinates crop
   square = x[75+50:75+50+160, 10:10+160, :]  
   gray =rgb2gray(square)
-  #print gray
+  print gray
   coords = corner_peaks(corner_harris(gray), min_distance=5)
   coords_subpix = corner_subpix(gray, coords, window_size=13)
   for item in coords_subpix:
@@ -47,10 +47,6 @@ def forward(ob):
     return []
   
   print goal_y,goal_x
-  plt.close()
-  plt.imshow(gray, cmap='gray')
-  plt.scatter(newx, newy, s=5, c='red', marker='o')
-  plt.show(block=False)
   #xcoord = np.random.randint(0, 160) + 10         # todo: something more clever here
   #ycoord = np.random.randint(0, 160) + 75 + 50    # todo: something more clever here
   #print ycoord,xcoord
