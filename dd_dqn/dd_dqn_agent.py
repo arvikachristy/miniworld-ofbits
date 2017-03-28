@@ -178,7 +178,7 @@ def intToVNCAction(a, include_stay, x, y, step_size):
             return [universe.spaces.PointerEvent(x + step_size, y, 0)], x + step_size, y
     elif a == 5 and include_stay:
         return [universe.spaces.PointerEvent(x, y, 0)], x, y
-    print 'Undefined action', a
+    print 'Cannot take action (', a, ')'
     return [], x, y
 
 def getEpisodeNumber(info, prev):
@@ -231,9 +231,9 @@ def chooseActionFromSingleQOut(singleQOut, use_probs, print_softmax):
 
 def chooseActionFromQOut(QOut, use_probs, print_softmax):
     if QOut.ndim == 1:
-        return chooseActionFromSingleQOut(QOut, use_probs)
+        return chooseActionFromSingleQOut(QOut, use_probs, print_softmax)
     else:
-        return [chooseActionFromSingleQOut(q, use_probs) for q in QOut]
+        return [chooseActionFromSingleQOut(q, use_probs, print_softmax) for q in QOut]
 
 def isValidObservation(s):
     return s is not None and len(s) > 0 and s[0] is not None and type(s[0]) == dict and 'vision' in s[0]
@@ -295,7 +295,7 @@ def getCenterOfButton(s, prevX, prevY, cursorH, cursorW):
     goalY = np.mean(newY) + 125
     return goalX, goalY, newX, newY
 
-def generateSupervisedAction(s, prevX, prevY, cursorH, cursorW, step_size, include_prompt):
+def generateSupervisedAction(s, prevX, prevY, cursorH, cursorW, step_size, include_prompt, num_actions, step_num):
     '''Only implemented for the ClickTest-v0 environment'''
     # TODO: other environments
     goalX, goalY, newX, newY = getCenterOfButton(s, prevX, prevY, cursorH, cursorW)
@@ -310,11 +310,11 @@ def generateSupervisedAction(s, prevX, prevY, cursorH, cursorW, step_size, inclu
 
     if math.isnan(goalX) or math.isnan(goalY):
         print '---- Found no corners!'
-        return np.random.randint(0, 5)
+        return np.random.randint(0, num_actions)
     xDiff = goalX - prevX
     yDiff = goalY - prevY
     #print 'diffs', goalX, '-', prevX, '=', xDiff, '\t', goalY, '-', prevY, '=', yDiff
-    print 'Supervised',
+    print step_num, 'Supervised',
     if abs(xDiff) < step_size and abs(yDiff) < step_size:
         print 'CLICK'
         return 0 # CLICK
@@ -333,18 +333,18 @@ def generateSupervisedAction(s, prevX, prevY, cursorH, cursorW, step_size, inclu
             print 'UP'
             return 1 # UP
 
-def sampleAction(raw_s, prevX, prevY, mainQN, epsilon, total_steps, pre_train_steps, supervised_episode, include_prompt, cursorH, cursorW, step_size=15):
+def sampleAction(sess, raw_s, s, prevX, prevY, mainQN, num_actions, epsilon, step_num, total_steps, pre_train_steps, supervised_episode, stochastic_policy, include_prompt, cursorH, cursorW, step_size=15):
     # TODO:
     # check if s needs to be unprocessed
-    #
-    s = raw_s[0]['vision']
-    s = s[75+50:75+210, 10:10+160, :]
-    s = rgbToGrayscale(s)
-    plotVision(s, include_rgb=False)
     
     if supervised_episode:
+        # Use full size image for corner detection
+        full_size_s = raw_s[0]['vision']
+        full_size_s = full_size_s[75+50:75+210, 10:10+160, :]
+        full_size_s = rgbToGrayscale(full_size_s)
+        plotVision(full_size_s, include_rgb=False)
         #print 'Supervised episode'
-        a_num = generateSupervisedAction(s, prevX, prevY, cursorH, cursorW, step_size, include_prompt)
+        a_num = generateSupervisedAction(full_size_s, prevX, prevY, cursorH, cursorW, step_size, include_prompt, num_actions, step_num)
         #print a_num
         if a_num != -1:
             return a_num
@@ -549,7 +549,7 @@ def dd_dqn_main():
                 step_num += 1
                 # Sample an action given state s using mainQN and an epsilon-greedy policy
                 supervised_episode = ep_num < num_supervised_episodes
-                a_num = sampleAction(raw_s, prevX, prevY, mainQN, epsilon, total_steps, pre_train_steps, supervised_episode, include_prompt, cursor_height, cursor_width, step_size)
+                a_num = sampleAction(sess, raw_s, s, prevX, prevY, mainQN, num_actions, epsilon, step_num, total_steps, pre_train_steps, supervised_episode, stochastic_policy, include_prompt, cursor_height, cursor_width, step_size)
                 prevX, prevY = currentX, currentY
 
                 a, currentX, currentY = intToVNCAction(a_num, include_stay, prevX, prevY, step_size)
