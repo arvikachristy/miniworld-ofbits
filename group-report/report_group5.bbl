@@ -21,7 +21,29 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
-\bibitem{placeholder}
-placeholder, ``placeholder,'' placeholder, Tech. Rep., placeholder.
+\bibitem{mnih2013playing}
+V.~Mnih, K.~Kavukcuoglu, D.~Silver, A.~Graves, I.~Antonoglou, D.~Wierstra, and
+  M.~Riedmiller, ``Playing atari with deep reinforcement learning,''
+  \emph{arXiv preprint arXiv:1312.5602}, 2013.
+
+\bibitem{mwob}
+\BIBentryALTinterwordspacing
+(2016). [Online]. Available: \url{http://alpha.openai.com/miniwob/index.html}
+\BIBentrySTDinterwordspacing
+
+\bibitem{lecun1998gradient}
+Y.~LeCun, L.~Bottou, Y.~Bengio, and P.~Haffner, ``Gradient-based learning
+  applied to document recognition,'' \emph{Proceedings of the IEEE}, vol.~86,
+  no.~11, pp. 2278--2324, 1998.
+
+\bibitem{lillicrap2015continuous}
+T.~P. Lillicrap, J.~J. Hunt, A.~Pritzel, N.~Heess, T.~Erez, Y.~Tassa,
+  D.~Silver, and D.~Wierstra, ``Continuous control with deep reinforcement
+  learning,'' \emph{arXiv preprint arXiv:1509.02971}, 2015.
+
+\bibitem{pendulum}
+\BIBentryALTinterwordspacing
+(2016). [Online]. Available: \url{https://gym.openai.com/envs/Pendulum-v0}
+\BIBentrySTDinterwordspacing
 
 \end{thebibliography}

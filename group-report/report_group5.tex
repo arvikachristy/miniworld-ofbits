@@ -41,15 +41,12 @@
 %% ** renaming them and changing author support contact information. **
 %%*************************************************************************
 
-
 % *** Authors should verify (and, if needed, correct) their LaTeX system  ***
 % *** with the testflow diagnostic prior to trusting their LaTeX platform ***
 % *** with production work. The IEEE's font choices and paper sizes can   ***
 % *** trigger bugs that do not appear when using other class files.       ***                          ***
 % The testflow support page is at:
 % http://www.michaelshell.org/tex/testflow/
-
-
 
 \documentclass[conference]{IEEEtran}
 % Some Computer Society conferences also require the compsoc mode option,
@@ -59,13 +56,8 @@
 % manually specify the path to it like:
 % \documentclass[conference]{../sty/IEEEtran}
 
-
-
-
-
 % Some very useful LaTeX packages include:
 % (uncomment the ones you want to load)
-
 
 % *** MISC UTILITY PACKAGES ***
 %
@@ -85,24 +77,14 @@
 % When switching from latex to pdflatex and vice-versa, the compiler may
 % have to be run twice to clear warning/error messages.
 
-
-
-
-
-
 % *** CITATION PACKAGES ***
 %
 \usepackage{cite}
 
-
-
-
-
-
 % *** GRAPHICS RELATED PACKAGES ***
 %
 \ifCLASSINFOpdf
-  % \usepackage[pdftex]{graphicx}
+ \usepackage[pdftex]{graphicx}
   % declare the path(s) where your graphic files are
   % \graphicspath{{../pdf/}{../jpeg/}}
   % and their extensions so you won't have to specify these with
@@ -139,68 +121,22 @@
 % You can find documentation about the pdfTeX application at:
 % http://www.tug.org/applications/pdftex
 
-
-
-
-
 % *** MATH PACKAGES ***
 %
 %\usepackage{amsmath}
-% A popular package from the American Mathematical Society that provides
-% many useful and powerful commands for dealing with mathematics.
-%
-% Note that the amsmath package sets \interdisplaylinepenalty to 10000
-% thus preventing page breaks from occurring within multiline equations. Use:
-%\interdisplaylinepenalty=2500
-% after loading amsmath to restore such page breaks as IEEEtran.cls normally
-% does. amsmath.sty is already installed on most LaTeX systems. The latest
-% version and documentation can be obtained at:
-% http://www.ctan.org/pkg/amsmath
-
-
-
-
 
 % *** SPECIALIZED LIST PACKAGES ***
 %
 %\usepackage{algorithmic}
-% algorithmic.sty was written by Peter Williams and Rogerio Brito.
-% This package provides an algorithmic environment fo describing algorithms.
-% You can use the algorithmic environment in-text or within a figure
-% environment to provide for a floating algorithm. Do NOT use the algorithm
-% floating environment provided by algorithm.sty (by the same authors) or
-% algorithm2e.sty (by Christophe Fiorio) as the IEEE does not use dedicated
-% algorithm float types and packages that provide these will not provide
-% correct IEEE style captions. The latest version and documentation of
-% algorithmic.sty can be obtained at:
-% http://www.ctan.org/pkg/algorithms
-% Also of interest may be the (relatively newer and more customizable)
-% algorithmicx.sty package by Szasz Janos:
-% http://www.ctan.org/pkg/algorithmicx
-
-
-
 
 % *** ALIGNMENT PACKAGES ***
 %
 %\usepackage{array}
-% Frank Mittelbach's and David Carlisle's array.sty patches and improves
-% the standard LaTeX2e array and tabular environments to provide better
-% appearance and additional user controls. As the default LaTeX2e table
-% generation code is lacking to the point of almost being broken with
-% respect to the quality of the end results, all users are strongly
-% advised to use an enhanced (at the very least that provided by array.sty)
-% set of table tools. array.sty is already installed on most systems. The
-% latest version and documentation can be obtained at:
-% http://www.ctan.org/pkg/array
 
 
 % IEEEtran contains the IEEEeqnarray family of commands that can be used to
 % generate multiline equations as well as matrices, tables, etc., of high
 % quality.
-
-
-
 
 % *** SUBFIGURE PACKAGES ***
 %\ifCLASSOPTIONcompsoc
@@ -320,9 +256,7 @@
 \and
 \IEEEauthorblockN{Rajind Karunaratne}
 \IEEEauthorblockA{rajind.karunaratne.14@ucl.ac.uk\\}
-
 \and
-
 \IEEEauthorblockN{\hspace{5.0cm}Jamie Law}
 \IEEEauthorblockA{\hspace{5.0cm}jamie.law.14@ucl.ac.uk}
 \and
@@ -347,14 +281,10 @@
 % As a general rule, do not put math, special symbols or citations
 % in the abstract
 \begin{abstract}
-The abstract goes here \cite{placeholder}.
+Deep learning is an emerging field that has shown many breakthroughs recently due to the technology available. Within reinforcement learning, deep learning has shown to be effective in game-like environments. The purpose of this study is to investigate the effectiveness of using deep reinforcement learning to train agents on a novel benchmark, Mini World of Bits (developed by OpenAI). This benchmark can be seen as an initial foundation for website interaction which, if mastered, would strongly infer development towards performing automation on tasks in real-world websites and furthering progress towards AI general intelligence. We look at adapting and evaluating deep Q-networks and policy gradient algorithms for this benchmark and then determining each model's success based off an average of the reward function from the environments, ideally looking towards a positive trend through the training process. [potential conclusion based on results]
 \end{abstract}
 
 % no keywords
-
-
-
-
 % For peer review papers, you can put extra information on the cover
 % page as needed:
 % \ifCLASSOPTIONpeerreview
@@ -365,25 +295,40 @@ The abstract goes here \cite{placeholder}.
 % creates the second title. It will be ignored for other modes.
 \IEEEpeerreviewmaketitle
 
-
-
 \section{Introduction}
-% no \IEEEPARstart
-This demo file is intended to serve as a ``starter file''
-for IEEE conference papers produced under \LaTeX\ using
-IEEEtran.cls version 1.8b and later.
-% You must have at least 2 lines in the paragraph with the drop letter
-% (should never be an issue)
-I wish you the best of success.
+Over the past few years, there has been a monumental shift in technology and how it's being applied to everyday life, of which deep reinforcement learning is a field which has recently shown potential due to the technology available. With typical algorithms, computers are told how to deal with problems, but with deep learning computers are told to teach themselves to deal with these problems. Significant progress has already been demonstrated in experiments on the Universe platform, where agents have been trained via deep reinforcement learning to successfully play Atari games \cite{mnih2013playing}. We have looked to extend the implementation of deep reinforcement learning methods onto browser-based tasks. This introduction will give the reader an insight into the concerned technologies as well as deriving a justified hypothesis. 
+
+\subsection{OpenAI Universe}
+Universe is a software platform developed by OpenAI built for training and measuring AI across a wide range of games, websites and other environments. Any program can be turned into a Gym (a toolkit for developing and comparing reinforcement learning algorithms) environment via this platform. It provides the agent's access to programs via a VNC client on a remote desktop (inside a Docker container), allowing the agent to perceive and act on the program the same way a human does by interpreting the pixel values of a screen and producing a combination of keyboard and/or mouse actions. 
+
+The ultimate goal of Universe is to develop a single agent that can apply all of its previous experiences to quickly adapt and master to other unfamiliar environments, which would demonstrate monumental progress towards general intelligence. This differs to other systems which typically fall into the category of "Narrow AI", which are systems that perform well in a specific domain but struggle to adapt to other environments. 
+
+A large number of environments have already been integrated into Universe, such as Atari games, Flash games and Browser based tasks, of which a prominent benchmark is Mini World of Bits.
+
+\subsection{Mini World of Bits}
+
+\begin{figure*}[t]
+	\includegraphics[width=\textwidth, height=\textheight, keepaspectratio]{mwob.png}
+	\caption{Example environments from the Mini World of Bits benchmark \cite{mwob}, task prompts are indicated in the yellow section while the white section is the canvas area}
+	\label{fig:mwob}
+\end{figure*}
+
+Mini World of Bits (MWoB) \cite{mwob} is a new benchmark which consists of a wide range of browser-based tasks, such as clicking a button, entering text, all the way up to more complex tasks such as searching for a flight between dates. It can be seen as an initial foundation that encapsulates the core functionalities of website interactions which, if mastered, would provide strong inference of development towards performing well on real-world websites. The benchmark can be seen as an equivalence to the MNIST dataset \cite{lecun1998gradient} in terms of visual recognition, where the ultimate goal for the agents is to be able to perceive and interpret the provided data in a small, self-contained area to complete the task.
+
+The environments are written in a combination of HTML, JavaScript and CSS, although the agents can not perceive this information via Universe. Each environment is a 210px by 160px webpage, where the yellow section indicates the task prompt and the white section is the canvas area for performing the task (examples of environments can be seen in figure \ref{fig:mwob}). The agents receive visual information which are the raw pixel values of the webpage and then attempt to produce a combination of keyboard or mouse actions to attempt to complete the task. They also receive a reward value based on the task progress, ranging 0 to 1 if the task is completed (dependent on the time taken for completion) and -1 if the task is failed or time has run out.
+
+We have looked into the MWoB benchmark due to its novelty; no results have been published yet for this, in contrast to other Universe environments such as Atari games or Flash games where significant progress has already been demonstrated using deep reinforcement learning \cite{mnih2013playing}.
+
+\subsection{Hypothesis}
+Due to the success of deep reinforcement learning in other experiments, we are looking to investigate the effectiveness of using the respective algorithms on the Mini World of Bits benchmark:
+\begin{center}
+\textit{"Deep Reinforcement Learning would be effective in the Mini World of Bits benchmark"}
+\end{center}
 
 \section{Related work}
 Subsection text here.
 
-
 \section{Methodology}
-
-\subsection{Research Hypothesis}
-Deep Reinforcement Learning would be effective in the Mini World of Bits benchmark.
 
 \subsection{Environments}
 
@@ -407,20 +352,34 @@ Deep Reinforcement Learning would be effective in the Mini World of Bits benchma
 
 \subsection{Limitations}
 
-\section{Future work}
+\section{Conclusion and future work}
+\subsection{Conclusion}
+Following from the analysis of our results, we can conclude that...
+\subsection{Future work}
+The novelty of the benchmark indicates still a wide area of progress that can be made, as such there are many future possibilities to expand upon the current state of our project:
+\subsubsection{Continuous action spaces}
+As we have only discussed discrete action spaces, we would invest more research into implementing continuous action spaces. We are still currently looking into the full implementation and training of an agent via a \textbf{Deep Deterministic Policy Gradient} algorithm \cite{lillicrap2015continuous}, which is specifically designed for continuous action spaces and has shown to be very effective in other non-MWoB environments that use continuous actions, such as the inverted pendulum experiment \cite{pendulum} where the objective is to provide a magnitude to balance the pendulum. The algorithm focuses on an actor-critic method, where the policy function structure is known as the actor, and the value function structure is known as the critic. The actor produces an action given the current state of the environment, and the critic produces a Temporal-Difference error signal given the state and resultant reward. Both the actor and critic learn from the critic's output. In this scenario, neural networks can be used to represent the actor and critic structures, more specifically convolutional neural networks.
 
+We have looked at modelling a magnitude of an action space ranging from -1 to 1 for both angle and distance, where the magnitude is then scaled into a discretised action. This differs to existing solutions which only produce one magnitude for an action. The simple equation below shows how the angle in radians, \( \theta \), is calculated via magnitude \textit{m}:
+\[ \theta=m\pi \]
+For example, if magnitude was -0.5, the angle to move would be -\( 0.5\pi \). A similar equation would be used to scale the distance \textit{d} by a set fixed distance \textit{D}:
+\[ d=mD \]
+ Following this, the \textit{x} and \textit{y} distances to move can be calculated accordingly:
+ \[ xdist=dsin\theta \]
+ \[ ydist=dcos\theta \]
+ 
+This method could prove to be more effective than existing methods that we have implemented due to the fact that hypothetically it would learn quicker; the mouse can navigate to anywhere within the canvas in one step instead of a discretised action space where it would have to slowly navigate to a designated area via several steps.
 
+\subsubsection{Natural language processing}
+Another development would be performing natural language processing on the webpage. To elaborate on this with an example, if the question told us to enter a certain word into a text box, we would need NLP to identify this in the prompt in accordance with the agent to correspond with the features identified in the canvas. This can further be extended by analysing the vision to find relevant text via two possible methods:
+\indent
+\begin{itemize}
+\item Optical Character Recognition (OCR) - identify and convert webpage text into machine-encoded text. This is eased by the fact that we are already performing input processing on the image fed to the agent, such that pre-processes in OCR such as binarisation are not needed. 
+\item Analysing Document Object Models (DOM) - identify key elements in the webpage where text is concerned. This would further be able to split up certain elements and attempt to classify them for the agent, such as identifying date inputs.
+\end{itemize}
 
-
-
-
-%\section{Conclusion}
-%The conclusion goes here.
-
-
-
-
-% conference papers do not normally have an appendix
+\subsubsection{Categorical tasks}
+As we have only experimented on environments where clicking an object is the goal of the task, it would be ideal to expand further to other categories of environments, such as dragging and dropping tasks or text-input tasks. Some more complex tasks within the benchmark involve using a combination of these categories e.g drag and drop an object into an area and click submit. It is highly possible that once most, if not all, of the task categories are fulfilled/trained, the agent would be able to train successfully on real-world websites that involve these respective tasks.
 
 
 % use section* for acknowledgment
@@ -429,6 +388,7 @@ Deep Reinforcement Learning would be effective in the Mini World of Bits benchma
 
 %The authors would like to thank...
 
+% to add a reference, go to the article page and find the option to 'cite' via BibTex. Copy and paste this into the .bib file and make note of the citation key (change the citation key to something easier to remember for yourself if you want), and then use \cite{citationkey} where you want to reference. You need to compile the bibliography before it will show (Command+shift+B on mac), then compile normally and your reference should show correctly. 
 
 \bibliography{references}
 \bibliographystyle{IEEEtran}
