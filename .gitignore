@@ -1,4 +1,12 @@
+# Python
 *.pyc
+
+# LaTeX
+
+group-report/*.aux
+group-report/*.log
+group-report/*.pdf
+group-report/*.synctex.gz
 
 # Agent evaluation and log files
 *evaluation
