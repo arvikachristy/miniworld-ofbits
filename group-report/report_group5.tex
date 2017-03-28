@@ -138,9 +138,6 @@
 % generate multiline equations as well as matrices, tables, etc., of high
 % quality.
 
-
-
-
 % *** SUBFIGURE PACKAGES ***
 %\ifCLASSOPTIONcompsoc
 %  \usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
@@ -299,7 +296,7 @@ Deep learning is an emerging field that has shown many breakthroughs recently du
 \IEEEpeerreviewmaketitle
 
 \section{Introduction}
-Over the past few years, there has been a monumental shift in technology and how it's being applied to everyday life, of which deep reinforcement learning is a field which has recently shown potential due to the technology available. With typical algorithms, computers are told how to deal with problems, but with deep learning computers are told to teach themselves to deal with these problems. Significant progress has already been demonstrated in experiments on the Universe platform, where agents have been trained via deep reinforcement learning to successfully play Atari games \cite{mnih2013playing}. We have looked to extend the implementation of deep reinforcement learning methods onto a novel area of browser-based tasks. This introduction will give the reader an insight into the concerned technologies as well as deriving a justified hypothesis. 
+Over the past few years, there has been a monumental shift in technology and how it's being applied to everyday life, of which deep reinforcement learning is a field which has recently shown potential due to the technology available. With typical algorithms, computers are told how to deal with problems, but with deep learning computers are told to teach themselves to deal with these problems. Significant progress has already been demonstrated in experiments on the Universe platform, where agents have been trained via deep reinforcement learning to successfully play Atari games \cite{mnih2013playing}. We have looked to extend the implementation of deep reinforcement learning methods onto browser-based tasks. This introduction will give the reader an insight into the concerned technologies as well as deriving a justified hypothesis. 
 
 \subsection{OpenAI Universe}
 Universe is a software platform developed by OpenAI built for training and measuring AI across a wide range of games, websites and other environments. Any program can be turned into a Gym (a toolkit for developing and comparing reinforcement learning algorithms) environment via this platform. It provides the agent's access to programs via a VNC client on a remote desktop (inside a Docker container), allowing the agent to perceive and act on the program the same way a human does by interpreting the pixel values of a screen and producing a combination of keyboard and/or mouse actions. 
@@ -333,9 +330,6 @@ Subsection text here.
 
 \section{Methodology}
 
-\subsection{Research Hypothesis}
-Deep Reinforcement Learning would be effective in the Mini World of Bits benchmark.
-
 \subsection{Agents}
 
 \subsection{Environments}
@@ -356,20 +350,34 @@ Deep Reinforcement Learning would be effective in the Mini World of Bits benchma
 
 \subsection{Limitations}
 
-\section{Future work}
+\section{Conclusion and future work}
+\subsection{Conclusion}
+Following from the analysis of our results, we can conclude that...
+\subsection{Future work}
+The novelty of the benchmark indicates still a wide area of progress that can be made, as such there are many future possibilities to expand upon the current state of our project:
+\subsubsection{Continuous action spaces}
+As we have only discussed discrete action spaces, we would invest more research into implementing continuous action spaces. We are still currently looking into the full implementation and training of an agent via a \textbf{Deep Deterministic Policy Gradient} algorithm \cite{lillicrap2015continuous}, which is specifically designed for continuous action spaces and has shown to be very effective in other non-MWoB environments that use continuous actions, such as the inverted pendulum experiment \cite{pendulum} where the objective is to provide a magnitude to balance the pendulum. The algorithm focuses on an actor-critic method, where the policy function structure is known as the actor, and the value function structure is known as the critic. The actor produces an action given the current state of the environment, and the critic produces a Temporal-Difference error signal given the state and resultant reward. Both the actor and critic learn from the critic's output. In this scenario, neural networks can be used to represent the actor and critic structures, more specifically convolutional neural networks.
 
+We have looked at modelling a magnitude of an action space ranging from -1 to 1 for both angle and distance, where the magnitude is then scaled into a discretised action. This differs to existing solutions which only produce one magnitude for an action. The simple equation below shows how the angle in radians, \( \theta \), is calculated via magnitude \textit{m}:
+\[ \theta=m\pi \]
+For example, if magnitude was -0.5, the angle to move would be -\( 0.5\pi \). A similar equation would be used to scale the distance \textit{d} by a set fixed distance \textit{D}:
+\[ d=mD \]
+ Following this, the \textit{x} and \textit{y} distances to move can be calculated accordingly:
+ \[ xdist=dsin\theta \]
+ \[ ydist=dcos\theta \]
+ 
+This method could prove to be more effective than existing methods that we have implemented due to the fact that hypothetically it would learn quicker; the mouse can navigate to anywhere within the canvas in one step instead of a discretised action space where it would have to slowly navigate to a designated area via several steps.
 
+\subsubsection{Natural language processing}
+Another development would be performing natural language processing on the webpage. To elaborate on this with an example, if the question told us to enter a certain word into a text box, we would need NLP to identify this in the prompt in accordance with the agent to correspond with the features identified in the canvas. This can further be extended by analysing the vision to find relevant text via two possible methods:
+\indent
+\begin{itemize}
+\item Optical Character Recognition (OCR) - identify and convert webpage text into machine-encoded text. This is eased by the fact that we are already performing input processing on the image fed to the agent, such that pre-processes in OCR such as binarisation are not needed. 
+\item Analysing Document Object Models (DOM) - identify key elements in the webpage where text is concerned. This would further be able to split up certain elements and attempt to classify them for the agent, such as identifying date inputs.
+\end{itemize}
 
-
-
-
-%\section{Conclusion}
-%The conclusion goes here.
-
-
-
-
-% conference papers do not normally have an appendix
+\subsubsection{Categorical tasks}
+As we have only experimented on environments where clicking an object is the goal of the task, it would be ideal to expand further to other categories of environments, such as dragging and dropping tasks or text-input tasks. Some more complex tasks within the benchmark involve using a combination of these categories e.g drag and drop an object into an area and click submit. It is highly possible that once most, if not all, of the task categories are fulfilled/trained, the agent would be able to train successfully on real-world websites that involve these respective tasks.
 
 
 % use section* for acknowledgment
