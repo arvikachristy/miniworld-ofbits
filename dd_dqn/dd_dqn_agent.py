@@ -10,6 +10,7 @@ import sys
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from skimage.feature import corner_harris, corner_subpix, corner_peaks
+from types import ModuleType
 
 from utils.Output import Output
 from ExperienceBuffer import ExperienceBuffer
@@ -17,7 +18,7 @@ from ExperienceBuffer import ExperienceBuffer
 # DD-DQN implementation based on Arthur Juliani's tutorial "Simple Reinforcement Learning with Tensorflow Part 4: Deep Q-Networks and Beyond"
 
 class QLearner():
-  def __init__(self, h_size, num_actions, zoom_to_cursor, include_rgb, include_prompt):
+  def __init__(self, h_size, num_actions, zoom_to_cursor, four_convs, include_rgb, include_prompt):
     z = 1
     if include_rgb:
         z = 3
@@ -45,42 +46,44 @@ class QLearner():
             pool1_ksize_y = 8
         self.imageIn = tf.placeholder(shape=[None, height, 80, z], dtype=tf.float32)
         print self.imageIn
-        '''
-        self.conv1 = tf.contrib.layers.convolution2d( \
-            inputs=self.imageIn,num_outputs=32,kernel_size=[8,8],stride=[4,4],padding='VALID',biases_initializer=None)
-        self.conv2 = tf.contrib.layers.convolution2d( \
-            inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID',biases_initializer=None)
-        self.pool1 = tf.nn.max_pool( \
-            value=self.conv2,ksize=[1,pool1_ksize_y,5,1],strides=[1,1,1,1],padding='VALID')
-        self.conv3 = tf.contrib.layers.convolution2d( \
-            inputs=self.pool1,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID',biases_initializer=None)
-        self.conv4 = tf.contrib.layers.convolution2d( \
-            inputs=self.conv3,num_outputs=1024,kernel_size=[2,2],stride=[2,2],padding='VALID',biases_initializer=None)
-        '''
-        # Network architecture from DeepMind:
-        self.conv1 = tf.contrib.layers.convolution2d( \
-            inputs=self.imageIn,num_outputs=32,kernel_size=[8,8],stride=[4,4],padding='VALID',biases_initializer=None)
-        print self.conv1
-        self.conv2 = tf.contrib.layers.convolution2d( \
-            inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID',biases_initializer=None)
-        print self.conv2
-        self.conv3 = tf.contrib.layers.convolution2d( \
-            inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID',biases_initializer=None)
-        self.fc1 = tf.contrib.layers.fully_connected( \
-            inputs=self.conv3,num_outputs=512,activation_fn=tf.nn.relu)
-        #self.fc2 = tf.contrib.layers.fully_connected( \
-        #    inputs=self.fc1,num_outputs=,activation=None)
+
+        if four_convs:
+            self.conv1 = tf.contrib.layers.convolution2d( \
+                inputs=self.imageIn,num_outputs=32,kernel_size=[8,8],stride=[4,4],padding='VALID',biases_initializer=None)
+            self.conv2 = tf.contrib.layers.convolution2d( \
+                inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID',biases_initializer=None)
+            self.pool1 = tf.nn.max_pool( \
+                value=self.conv2,ksize=[1,pool1_ksize_y,5,1],strides=[1,1,1,1],padding='VALID')
+            self.conv3 = tf.contrib.layers.convolution2d( \
+                inputs=self.pool1,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID',biases_initializer=None)
+            self.conv4 = tf.contrib.layers.convolution2d( \
+                inputs=self.conv3,num_outputs=1024,kernel_size=[2,2],stride=[2,2],padding='VALID',biases_initializer=None)
+            self.outLayer = self.conv4
+        else:
+            # Network architecture from DeepMind:
+            self.conv1 = tf.contrib.layers.convolution2d( \
+                inputs=self.imageIn,num_outputs=32,kernel_size=[8,8],stride=[4,4],padding='VALID',biases_initializer=None)
+            self.conv2 = tf.contrib.layers.convolution2d( \
+                inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID',biases_initializer=None)
+            self.conv3 = tf.contrib.layers.convolution2d( \
+                inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID',biases_initializer=None)
+
+            shape = self.conv3.get_shape().as_list()
+            self.conv3_flat = tf.reshape(self.conv3, [-1, reduce(lambda x, y: x * y, shape[1:])])
+
+            self.fc1 = tf.contrib.layers.fully_connected( \
+                inputs=self.conv3_flat,num_outputs=512,activation_fn=tf.nn.relu)
+            self.outLayer = tf.reshape(self.fc1, shape=[-1, 1, 1, 512])
 
     # We take the output from the final convolutional layer and split it into separate
     # advantage and value streams.
-    self.streamAC, self.streamVC = tf.split(self.fc1, num_or_size_splits=2, axis=3)
+    self.streamAC, self.streamVC = tf.split(self.outLayer, num_or_size_splits=2, axis=3)
     self.streamA = tf.contrib.layers.flatten(self.streamAC)
     self.streamV = tf.contrib.layers.flatten(self.streamVC)
     self.AW = tf.Variable(tf.random_normal([h_size/2, num_actions]))
     self.VW = tf.Variable(tf.random_normal([h_size/2, 1]))
     self.Advantage = tf.matmul(self.streamA, self.AW)
     self.Value = tf.matmul(self.streamV, self.VW)
-
     # Then combine them together to get our final Q-values
     self.QOut = self.Value + tf.subtract(self.Advantage,
       tf.reduce_mean(self.Advantage, reduction_indices=1, keep_dims=True))
@@ -236,7 +239,7 @@ def softMax(xs):
 def chooseActionFromSingleQOut(singleQOut, use_probs, print_softmax):
     unique = np.unique(singleQOut)
     if len(unique) == 1:
-        return np.random(0, len(singleQOut))
+        return np.random.randint(0, len(singleQOut))
     elif use_probs:
         if print_softmax:
             print 'softmax', softMax(singleQOut), '\n'
@@ -479,7 +482,8 @@ def dd_dqn_main():
     if not include_horizontal_moves:
         num_actions -= 2
     zoom_to_cursor = False # Process the input to includ a zoomed-in view around the cursor
-    if not zoom_to_cursor:
+    four_convs = False # Use a 4-layer convolutional network
+    if not zoom_to_cursor and four_convs:
         h_size = 1024
     save_history = True # If true, write results to file. If false, render environment.
     tboard_summaries = True # If true, write summaries to file that can be shown in TensorBoard
@@ -491,8 +495,8 @@ def dd_dqn_main():
     env = makeEnvironment(env_name)
 
     tf.reset_default_graph()
-    mainQN = QLearner(h_size, num_actions, zoom_to_cursor, include_rgb, include_prompt)
-    targetQN = QLearner(h_size, num_actions, zoom_to_cursor, include_rgb, include_prompt)
+    mainQN = QLearner(h_size, num_actions, zoom_to_cursor, four_convs, include_rgb, include_prompt)
+    targetQN = QLearner(h_size, num_actions, zoom_to_cursor, four_convs, include_rgb, include_prompt)
 
     global_step = tf.Variable(0, name='global_step', trainable=False)
     init = tf.global_variables_initializer()
