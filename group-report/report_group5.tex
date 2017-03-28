@@ -41,15 +41,12 @@
 %% ** renaming them and changing author support contact information. **
 %%*************************************************************************
 
-
 % *** Authors should verify (and, if needed, correct) their LaTeX system  ***
 % *** with the testflow diagnostic prior to trusting their LaTeX platform ***
 % *** with production work. The IEEE's font choices and paper sizes can   ***
 % *** trigger bugs that do not appear when using other class files.       ***                          ***
 % The testflow support page is at:
 % http://www.michaelshell.org/tex/testflow/
-
-
 
 \documentclass[conference]{IEEEtran}
 % Some Computer Society conferences also require the compsoc mode option,
@@ -59,13 +56,8 @@
 % manually specify the path to it like:
 % \documentclass[conference]{../sty/IEEEtran}
 
-
-
-
-
 % Some very useful LaTeX packages include:
 % (uncomment the ones you want to load)
-
 
 % *** MISC UTILITY PACKAGES ***
 %
@@ -85,19 +77,9 @@
 % When switching from latex to pdflatex and vice-versa, the compiler may
 % have to be run twice to clear warning/error messages.
 
-
-
-
-
-
 % *** CITATION PACKAGES ***
 %
 \usepackage{cite}
-
-
-
-
-
 
 % *** GRAPHICS RELATED PACKAGES ***
 %
@@ -139,60 +121,17 @@
 % You can find documentation about the pdfTeX application at:
 % http://www.tug.org/applications/pdftex
 
-
-
-
-
 % *** MATH PACKAGES ***
 %
 %\usepackage{amsmath}
-% A popular package from the American Mathematical Society that provides
-% many useful and powerful commands for dealing with mathematics.
-%
-% Note that the amsmath package sets \interdisplaylinepenalty to 10000
-% thus preventing page breaks from occurring within multiline equations. Use:
-%\interdisplaylinepenalty=2500
-% after loading amsmath to restore such page breaks as IEEEtran.cls normally
-% does. amsmath.sty is already installed on most LaTeX systems. The latest
-% version and documentation can be obtained at:
-% http://www.ctan.org/pkg/amsmath
-
-
-
-
 
 % *** SPECIALIZED LIST PACKAGES ***
 %
 %\usepackage{algorithmic}
-% algorithmic.sty was written by Peter Williams and Rogerio Brito.
-% This package provides an algorithmic environment fo describing algorithms.
-% You can use the algorithmic environment in-text or within a figure
-% environment to provide for a floating algorithm. Do NOT use the algorithm
-% floating environment provided by algorithm.sty (by the same authors) or
-% algorithm2e.sty (by Christophe Fiorio) as the IEEE does not use dedicated
-% algorithm float types and packages that provide these will not provide
-% correct IEEE style captions. The latest version and documentation of
-% algorithmic.sty can be obtained at:
-% http://www.ctan.org/pkg/algorithms
-% Also of interest may be the (relatively newer and more customizable)
-% algorithmicx.sty package by Szasz Janos:
-% http://www.ctan.org/pkg/algorithmicx
-
-
-
 
 % *** ALIGNMENT PACKAGES ***
 %
 %\usepackage{array}
-% Frank Mittelbach's and David Carlisle's array.sty patches and improves
-% the standard LaTeX2e array and tabular environments to provide better
-% appearance and additional user controls. As the default LaTeX2e table
-% generation code is lacking to the point of almost being broken with
-% respect to the quality of the end results, all users are strongly
-% advised to use an enhanced (at the very least that provided by array.sty)
-% set of table tools. array.sty is already installed on most systems. The
-% latest version and documentation can be obtained at:
-% http://www.ctan.org/pkg/array
 
 
 % IEEEtran contains the IEEEeqnarray family of commands that can be used to
@@ -320,9 +259,7 @@
 \and
 \IEEEauthorblockN{Rajind Karunaratne}
 \IEEEauthorblockA{rajind.karunaratne.14@ucl.ac.uk\\}
-
 \and
-
 \IEEEauthorblockN{Jamie Law}
 \IEEEauthorblockA{jamie.law.14@ucl.ac.uk}
 \and
@@ -347,7 +284,7 @@
 % As a general rule, do not put math, special symbols or citations
 % in the abstract
 \begin{abstract}
-The abstract goes here \cite{placeholder}.
+Deep learning is an emerging field that has shown many breakthroughs recently due to the technology available. Within reinforcement learning, deep learning has shown to be effective in game-like environments. The purpose of this study is to investigate the effectiveness of using deep reinforcement learning to train agents on a novel benchmark, Mini World of Bits (developed by OpenAI). We look at adapting and evaluating deep Q-networks and policy gradient algorithms for this benchmark. We determine each model's success based off an average of the reward function from the environments, ideally looking towards a positive trend through the training process. [potential conclusion based on results]
 \end{abstract}
 
 % no keywords
@@ -365,18 +302,13 @@ The abstract goes here \cite{placeholder}.
 % creates the second title. It will be ignored for other modes.
 \IEEEpeerreviewmaketitle
 
-
-
 \section{Introduction}
-% no \IEEEPARstart
-This demo file is intended to serve as a ``starter file''
-for IEEE conference papers produced under \LaTeX\ using
-IEEEtran.cls version 1.8b and later.
-% You must have at least 2 lines in the paragraph with the drop letter
-% (should never be an issue)
-I wish you the best of success.
+This introduction will give the reader an insight into 
 
-\subsection{Subsection Heading Here}
+\subsection{OpenAI Universe}
+Universe is a software platform built for training and measuring AI across a wide range of games, websites and other environments. It provides the agent's access to programs via a VNC client on a remote desktop, allowing the agent to perceive and act on the program the same way a human does: interpreting the pixel values of a screen and producing a combination of keyboard and/or mouse actions. The ultimate goal of universe is to develop a single agent that can apply all of its previous experiences to quickly adapt and master to other unfamiliar environments, which would demonstrate monumental progress towards general intelligence. This differs to other systems which typically fall into the category of "Narrow AI", which are systems that perform well in a specific domain but struggle to adapt to other environments.
+
+\subsection{Mini World of Bits}
 Subsection text here.
 
 
@@ -401,6 +333,7 @@ The conclusion goes here.
 
 The authors would like to thank...
 
+% to add a reference, go to the article page and find the option to 'cite' via BibTex. Copy and paste this into the .bib file and make note of the citation key (change the citation key to something easier to remember for yourself if you want), and then use \cite{citationkey} where you want to reference. You need to compile the bibliography before it will show (Command+shift+B on mac), then compile normally and your reference should show correctly. 
 
 \bibliography{references}
 \bibliographystyle{IEEEtran}
