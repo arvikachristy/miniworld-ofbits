@@ -84,7 +84,7 @@
 % *** GRAPHICS RELATED PACKAGES ***
 %
 \ifCLASSINFOpdf
-  % \usepackage[pdftex]{graphicx}
+ \usepackage[pdftex]{graphicx}
   % declare the path(s) where your graphic files are
   % \graphicspath{{../pdf/}{../jpeg/}}
   % and their extensions so you won't have to specify these with
@@ -284,14 +284,10 @@
 % As a general rule, do not put math, special symbols or citations
 % in the abstract
 \begin{abstract}
-Deep learning is an emerging field that has shown many breakthroughs recently due to the technology available. Within reinforcement learning, deep learning has shown to be effective in game-like environments. The purpose of this study is to investigate the effectiveness of using deep reinforcement learning to train agents on a novel benchmark, Mini World of Bits (developed by OpenAI). We look at adapting and evaluating deep Q-networks and policy gradient algorithms for this benchmark. We determine each model's success based off an average of the reward function from the environments, ideally looking towards a positive trend through the training process. [potential conclusion based on results]
+Deep learning is an emerging field that has shown many breakthroughs recently due to the technology available. Within reinforcement learning, deep learning has shown to be effective in game-like environments. The purpose of this study is to investigate the effectiveness of using deep reinforcement learning to train agents on a novel benchmark, Mini World of Bits (developed by OpenAI). This benchmark can be seen as an initial foundation for website interaction which, if mastered, would provide strong inference of development towards performing automation well on on real-world websites and furthering progress towards AI general intelligence. We look at adapting and evaluating deep Q-networks and policy gradient algorithms for this benchmark and then determining each model's success based off an average of the reward function from the environments, ideally looking towards a positive trend through the training process. [potential conclusion based on results]
 \end{abstract}
 
 % no keywords
-
-
-
-
 % For peer review papers, you can put extra information on the cover
 % page as needed:
 % \ifCLASSOPTIONpeerreview
@@ -303,12 +299,34 @@ Deep learning is an emerging field that has shown many breakthroughs recently du
 \IEEEpeerreviewmaketitle
 
 \section{Introduction}
-This introduction will give the reader an insight into 
+Over the past few years, there has been a monumental shift in technology and how it's being applied to everyday life, of which deep reinforcement learning is a field which has recently shown potential due to the technology available. With typical algorithms, computers are told how to deal with problems, but with deep learning computers are told to teach themselves to deal with these problems. Significant progress has already been demonstrated in experiments on the Universe platform, where agents have been trained via deep reinforcement learning to successfully play Atari games \cite{mnih2013playing}. We have looked to extend the implementation of deep reinforcement learning methods onto a novel area of browser-based tasks. This introduction will give the reader an insight into the concerned technologies as well as deriving a justified hypothesis. 
 
 \subsection{OpenAI Universe}
-Universe is a software platform built for training and measuring AI across a wide range of games, websites and other environments. It provides the agent's access to programs via a VNC client on a remote desktop, allowing the agent to perceive and act on the program the same way a human does: interpreting the pixel values of a screen and producing a combination of keyboard and/or mouse actions. The ultimate goal of universe is to develop a single agent that can apply all of its previous experiences to quickly adapt and master to other unfamiliar environments, which would demonstrate monumental progress towards general intelligence. This differs to other systems which typically fall into the category of "Narrow AI", which are systems that perform well in a specific domain but struggle to adapt to other environments.
+Universe is a software platform developed by OpenAI built for training and measuring AI across a wide range of games, websites and other environments. Any program can be turned into a Gym (a toolkit for developing and comparing reinforcement learning algorithms) environment via this platform. It provides the agent's access to programs via a VNC client on a remote desktop (inside a Docker container), allowing the agent to perceive and act on the program the same way a human does by interpreting the pixel values of a screen and producing a combination of keyboard and/or mouse actions. 
+
+The ultimate goal of Universe is to develop a single agent that can apply all of its previous experiences to quickly adapt and master to other unfamiliar environments, which would demonstrate monumental progress towards general intelligence. This differs to other systems which typically fall into the category of "Narrow AI", which are systems that perform well in a specific domain but struggle to adapt to other environments. 
+
+A large number of environments have already been integrated into Universe, such as Atari games, Flash games and Browser based tasks, of which a prominent benchmark is Mini World of Bits.
 
 \subsection{Mini World of Bits}
+
+\begin{figure*}[t]
+	\includegraphics[width=\textwidth, height=\textheight, keepaspectratio]{mwob.png}
+	\caption{Example environments from the Mini World of Bits benchmark \cite{mwob}, task prompts are indicated in the yellow section while the white section is the canvas area}
+	\label{fig:mwob}
+\end{figure*}
+
+Mini World of Bits (MWoB) \cite{mwob} is a new benchmark which consists of a wide range of browser-based tasks, such as clicking a button, entering text, all the way up to more complex tasks such as searching for a flight between dates. It can be seen as an initial foundation that encapsulates the core functionalities of website interactions which, if mastered, would provide strong inference of development towards performing well on real-world websites. The benchmark can be seen as an equivalence to the MNIST dataset \cite{lecun1998gradient} in terms of visual recognition, where the ultimate goal for the agents is to be able to perceive and interpret the provided data in a small, self-contained area to complete the task.
+
+The environments are written in a combination of HTML, JavaScript and CSS, although the agents can not perceive this information via Universe. Each environment is a 210px by 160px webpage, where the yellow section indicates the task prompt and the white section is the canvas area for performing the task (examples of environments can be seen in figure \ref{fig:mwob}). The agents receive visual information which are the raw pixel values of the webpage and then attempt to produce a combination of keyboard or mouse actions to attempt to complete the task. They also receive a reward value based on the task progress, ranging 0 to 1 if the task is completed (dependent on the time taken for completion) and -1 if the task is failed or time has run out.
+
+We have looked into the MWoB benchmark due to its novelty; no results have been published yet for this, in contrast to other Universe environments such as Atari games or Flash games where significant progress has already been demonstrated using deep reinforcement learning \cite{mnih2013playing}.
+
+\subsection{Hypothesis}
+Due to the success of deep reinforcement learning in other experiments, we are looking to investigate the effectiveness of using the respective algorithms on the Mini World of Bits benchmark:
+\begin{center}
+\textit{"Deep Reinforcement Learning would be effective in the Mini World of Bits benchmark"}
+\end{center}
 
 \section{Related Work}
 Subsection text here.
