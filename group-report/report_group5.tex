@@ -365,19 +365,11 @@ One way to optimize the agents in this environment is to use on-policy and off-p
 \\\\
 \underline{\bf On-policy methods}  
 \\
-Different action for each agent produces different rewards. One action may grant the agent positive reward if it'��s the correct move or negative reward if it'��s the incorrect move. In the on-policy method, we make sure the agent learns how to create a policy by choosing the optimal solution over time. There are multiple methods that implement an on-policy approach, however we are going to focus on one of the widely-used approaches, policy gradient.
+One of the advantages of policy-based reinforcement learning technique is its ability to learn stochastic policies and has the potential to handle continuous action spaces. For the on-policy method, we make sure the agent learns how to create a policy by choosing the optimal solution over time. There are multiple methods that implement an on-policy approach, however we are going to focus on one of the widely-used approaches, policy gradient.
 \subsubsection{Policy Gradient}
-Policy gradient is an on-policy method where the specified neural network is trained to create a policy by selecting optimal actions through gradient descent. Policy gradient implements a stochastic policy:
-\[ \mu(a|s) \]
-where:
-\indent
-\begin{itemize}
-\item \({{a}}\) : action that the agent takes.
-\item \({{s}}\) : state which the agent is experiencing.
-\end{itemize}
-
-This determines a probability distribution for the agent's actions throughout the training process. In the perfect world, the agent detects the wrong action with negative reward and detects the correct action with positive reward. Then after several trainings, the agent will be able to increase the chance of choosing the correct action. In the Mini World of Bits benchmark, the goal is to move the cursor to the specified target (button or text box) as close as possible and reward the agent if it manages to hit the button and learn from the chosen action'��s reward. 
-\\In this research, the vanilla Policy Gradient was chosen as the main on-policy approach. To get a basic vanilla Policy Gradient to work, we had to do some visual manipulation to the state and use discrete action spaces with a Convolutional Neural Network (CNN) as the policy. At first, we tried to use a fully connected network as the policy, however the network has too many parameters and is more difficult to train whereas CNN considers neighbouring pixels to shrink down the calculation time and space.
+In this research, Vanilla Policy Gradient was chosen as the main on-policy approach. Vanilla PG is relatively easier to implement and suits the environment as it supports arbitrary number of actions. On top of that, the most important advantage of this approach is that it does not depend on the adjustment of the policy therefore more secure to be used for several policies \cite{Peters:2010}. However, in some cases a more filtered and chosen adjustment of the policy sometimes has the potential to perform better with a more complicated implementation.
+\\It is quite challenging to fit Vanilla Policy Gradient without any support into the MWoB environment. Hence, visual manipulation to the initial input state had to be done such as cropping, transforming colour to greyscale and edge detection technique. At first, fully connected network was chosen as the policy, nonetheless the network has too much parameters and more difficult to train. Therefore, Convolutional Neural Network(CNN) was preferred as it considers neighbouring pixels to shrink down the calculation time and space. 
+\\To achieve the right input for the MWoB and Gym environment, TensorFlow played a crucial role to simplify and shaping the agent’s input and output. Tensorflow was used to implement the CNN equivalence in much easier step such as expanding the network into additional layers, modifying input, and adding/updating functions. On top of that, the advantage of using TensorFlow is its ability to produce TensorBoard to track the agent’s variable performance in a form of graph.
 \\\\
 \underline{\bf Off-policy methods}  
 \\
