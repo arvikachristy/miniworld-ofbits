@@ -732,7 +732,13 @@ Subsection text here.
 \section{Methodology}
 
 \subsection{Environments}
-
+Due to time restriction, we had to be selective on choosing some of the MWoB environments that we were going to experiment with. There exist four types of environment such as click tasks, drag tasks, mouse tasks and other tasks. In this research, the main goal is to tackle the click tasks problems. Within the click tasks problem, we eliminated some of the environments that require Natural Language Processing such as \textit{"word-matching"} or \textit{"colour-matching"} as it would be more difficult to develop. At the end, as shown in figure \ref{fig:chosen-envi}, three environments were chosen; click the button, focus into the textbox, and close the dialog box.
+\\All three environments have similar tasks that are achievable by creating a policy that clicks on the right area with the coordinate x and y as the 2D action space. Unfortunately, due to its early stage release, the environment source code has not been released yet by Open AI. This results restrictive exploration on the environment modification for this research. Therefore, the research is focusing on training the agent itself on the available environment.
+\begin{figure}
+	\includegraphics[width=\linewidth]{chosen-envi.png}
+	\caption{Environment of: 1. Click The Button, 2. Focus Into The Textbox, 3. Close The Dialog Box}
+	\label{fig:chosen-envi}
+\end{figure}
 \subsection{Action spaces}
 An agent performs a series of actions to interact with the environment in hopes of obtaining a reward signal, with the primary objective of maximizing the cumulative reward based on the current state of the environment. When we consider the set of actions an agent is allowed to perform, this set can either be \textbf{discrete} or \textbf{continuous}. A discrete action space is simply a fixed set of actions that an agent is can perform. Continuous action spaces are more complex, often involving function approximations to determine an approximation of the optimal action for a given state. \linebreak
 
@@ -758,20 +764,16 @@ Generated states of any environment within Universe are represented as raw pixel
 Figure 2 presents three screenshots that showcases some of these experimented additions. The top left is a grayscaled and downsampled image to 84x84 pixels. Additionally, the key factor to this is that the last four frames before the current state are stacked into one image to provide directional information. The right image also uses a downsample view of the canvas. This method however makes use of an additional field-of-view, or a sort of \textit{"second eyesight"} that has a magnified view of the cursor up-close that also follows its movement. The bottom-right presents an illustration for an implementation of edge detection using the SciKit-Image library. This edge data is embedded within the pixel information in hopes to identify features (buttons, checkboxes, etc.) within the canvas more efficiently. All these processing techniques all have a general aim of providing an increased supervision to the agent in hopes of speeding up the training process.
 
 \subsection{Implemented models}
-One way to optimize the agents in this environment is to use on-policy and off-policy methods. On-policy methods create a policy to make decision that is being improved using the agent€™s action value over time. Off-policy method is more complicated in which the agent (in the context of Q-Learning) is using a second greedy policy to determine the value of its actions, regardless of what the current policy recommends \cite{sutton1998reinforcement}. The chosen models for both methods are Policy Gradient and DDQN \& DDDQN for on-policy and off-policy respectively. 
+One way to optimize the agents in this environment is to use on-policy and off-policy methods. On-policy methods create a policy to make decision that is being improved using the agentï¿½ï¿½s action value over time. Off-policy method is more complicated in which the agent (in the context of Q-Learning) is using a second greedy policy to determine the value of its actions, regardless of what the current policy recommends \cite{sutton1998reinforcement}. The chosen models for both methods are Policy Gradient and DDQN \& DDDQN for on-policy and off-policy respectively. 
+\subsubsection{On-policy methods}  
+Different action for each agent produces different rewards. One action may grant the agent positive reward if it'ï¿½ï¿½s the correct move or negative reward if it'ï¿½ï¿½s the incorrect move. In the on-policy method, we make sure the agent learns how to create a policy by choosing the optimal solution over time. There are multiple methods that implement an on-policy approach, however we are going to focus on one of the widely-used approaches, policy gradient.
+\paragraph{\bf Policy Gradient}
+In this research, Vanilla Policy Gradient was chosen as the main on-policy approach. Vanilla PG is relatively easier to implement and suits the environment as it supports arbitrary number of actions. On top of that, the most important advantage of this approach is that it does not depend on the adjustment of the policy therefore more secure to be used for several policies \cite{Peters:2010}. However, in some cases a more filtered and chosen adjustment of the policy sometimes has the potential to perform better with a more complicated implementation.
+\\It is quite challenging to fit Vanilla Policy Gradient without any support into the MWoB environment. Hence, visual manipulation to the initial input state had to be done such as cropping, transforming colour to greyscale and edge detection technique. At first, fully connected network was chosen as the policy, nonetheless the network has too much parameters and more difficult to train. Therefore, Convolutional Neural Network(CNN) was preferred as it considers neighbouring pixels to shrink down the calculation time and space. 
+\\To achieve the right input for the MWoB and Gym environment, TensorFlow played a crucial role to simplify and shaping the agentâ€™s input and output. Tensorflow was used to implement the CNN equivalence in much easier step such as expanding the network into additional layers, modifying input, and adding/updating functions. On top of that, the advantage of using TensorFlow is its ability to produce TensorBoard to track the agentâ€™s variable performance in a form of graph.
 \\\\
-\underline{\bf On-policy methods}  
-\\
-Different action for each agent produces different rewards. One action may grant the agent positive reward if it'€™s the correct move or negative reward if it'€™s the incorrect move. In the on-policy method, we make sure the agent learns how to create a policy by choosing the optimal solution over time. There are multiple methods that implement an on-policy approach, however we are going to focus on one of the widely-used approaches, policy gradient.
-\subsubsection{Policy Gradient}
-Policy gradient is an on-policy method where the specified neural network is trained to create a policy by selecting optimal actions through gradient descent. Policy gradient implements a stochastic policy:
-\[ \mu(a|s) \]
-This determines a probability distribution for the agent's actions throughout the training process. In the perfect world, the agent detects the wrong action with negative reward and detects the correct action with positive reward. Then after several trainings, the agent will be able to increase the chance of choosing the correct action. In the Mini World of Bits benchmark, the goal is to move the cursor to the specified target (button or text box) as close as possible and reward the agent if it manages to hit the button and learn from the chosen action'€™s reward. 
-\\In this research, the vanilla Policy Gradient was chosen as the main on-policy approach. To get a basic vanilla Policy Gradient to work, we had to do some visual manipulation to the state and use discrete action spaces with a Convolutional Neural Network (CNN) as the policy. At first, we tried to use a fully connected network as the policy, however the network has too many parameters and is more difficult to train whereas CNN considers neighbouring pixels to shrink down the calculation time and space.
-\\\\
-\underline{\bf Off-policy methods}  
-\\
-\subsubsection{Q Learning}
+\subsubsection{Off-policy methods}  
+\paragraph{\bf Q Learning}
 When we consider off-policy Temporal Difference (TD) control, a common method is through Q-Learning. Q Learning comprises of an action-value function that, when optimized, assists to find an optimal action-selection policy for a discrete MDP (this is where the compatibility for discrete action spaces come into play). This is through selection of actions with the highest Q value at a given state in time. In a formal sense, the Q function can be defined as :
 \begin{align*}
 Q\left( \mbox{S}_{t},\; A_{t} \right)\; &\leftarrow\;Q\left( \mbox{S}_{t},\; A_{t} \right)\;\\ 
@@ -790,7 +792,7 @@ We shall break down this equation as follows :
 
 This Q-Learning function is iterated through every episode in the environment to eventually slowly converge to an optimal policy.
 
-\subsubsection{Deep Q Learning}
+\paragraph{\bf Deep Q Learning}
 The problem with such naive-iteration is that due to the dynamic nature of the environments, this can present a large scope of state-action pairs without any form of generalization, and the nature of iterating through each state-action pair for a given state is highly impractical. There is also the caveat where slight changes to the Q-values can result in significant changes to the policy that can diverge the optimization of the Q function. In such a case, we refer to a neural network as a function approximator with weights \(\theta\) to help stabilize estimations of the action-value function. This form of agent is referred to as a \textbf{Deep Q Network}\cite{deepqlearning}, serving as the primary architecture of our off-policy implementation. There are three main components to the Deep Q Network as follows:
 \begin{itemize}
 \item \textbf{Experience Replay} : Before the training process, an agent stores its experiences during each time step \textit{e(t)} in the form of a tuple represented as (\({{S}}_{{t}}\), \({{A}}_{{t}}\), \({{R}}_{{t+1}}\), \({{S}}_{{t+1}}\), \(d\)), with \(d\) a boolean variable signifying if the step completes the episode. These tuples are all stored in a replay memory \(D\) for a certain initial capacity. When the training process begins, the agent samples a batch of tuples from \(D\) that is fed onto a multi-layered neural network calculate predictions and update the Q-function for every \textit{e(t)}.\linebreak
