@@ -552,12 +552,7 @@ pdfkeywords={Computer Society, IEEEtran, journal, LaTeX, paper,
 % journal papers have the author affiliations above the "Manuscript
 % received ..."  text while in non-compsoc journals this is reversed. Sigh.
 
-\author{Minttu Alakuijala,
-        Vika~Christy,
-        Rajind~Karunaratne,
-        Jamie~Law,
-        Yuhang~Xu,
-        and~Jun~Wang
+\author{Minttu Alakuijala, Vika Christy, Rajind Karunaratne, Jamie Law, Yuhang Xu, and Jun Wang
         %and~Jane~Doe,~\IEEEmembership{Life~Fellow,~IEEE}% <-this % stops a space
 \IEEEcompsocitemizethanks{\IEEEcompsocthanksitem M. Shell was with the Department
 of Electrical and Computer Engineering, Georgia Institute of Technology, Atlanta,
@@ -629,7 +624,7 @@ E-mail: see http://www.michaelshell.org/contact.html
 % in the abstract or keywords.
 \IEEEtitleabstractindextext{%
 \begin{abstract}
-Deep learning is an emerging field that has shown many breakthroughs recently due to the technology available. Within reinforcement learning, deep learning has shown to be effective in game-like environments. The purpose of this study is to investigate the effectiveness of using deep reinforcement learning to train agents on a novel benchmark, Mini World of Bits (developed by OpenAI). This benchmark can be seen as an initial foundation for website interaction which, if mastered, would strongly infer development towards performing automation on tasks in real-world websites and furthering progress towards AI general intelligence. We look at adapting and evaluating deep Q-networks and policy gradient algorithms for this benchmark and then determining each model's success based off an average of the reward function from the environments, ideally looking towards a positive trend through the training process. [potential conclusion based on results]
+Deep learning is an emerging field that has shown many breakthroughs recently due to the technology available. Within reinforcement learning, deep learning has shown to be effective in game-like environments. The purpose of this study is to investigate the effectiveness of using deep reinforcement learning to train agents on Mini World of Bits, a novel benchmark developed by OpenAI. This benchmark can be seen as an initial foundation for website interaction which, if mastered, would strongly infer development towards performing automation on tasks in real-world websites and furthering progress towards AI general intelligence. We look at adapting and evaluating deep Q-networks and policy gradient algorithms for this benchmark and then determining each model's success based off an average of the reward function from the environments, ideally looking towards a positive trend through the training process. [potential conclusion based on results]
 \end{abstract}
 
 % Note that keywords are not normally used for peerreview papers.
@@ -697,7 +692,7 @@ Reinforcement learning%, action spaces, policy gradient, DQN, DDPG?
 % 
 % Here we have the typical use of a "T" for an initial drop letter
 % and "HIS" in caps to complete the first word.
-\IEEEPARstart{O}{ver} the past few years, there has been a monumental shift in technology and how it's being applied to everyday life, of which deep reinforcement learning is a field which has recently shown potential due to the technology available. With typical algorithms, computers are told how to deal with problems, but with deep learning computers are told to teach themselves to deal with these problems. Significant progress has already been demonstrated in experiments on the Universe platform, where agents have been trained via deep reinforcement learning to successfully play Atari games \cite{mnih2013playing}. We have looked to extend the implementation of deep reinforcement learning methods onto browser-based tasks. This introduction will give the reader an insight into the concerned technologies as well as deriving a justified hypothesis.
+\IEEEPARstart{O}{ver} the past few years, there has been a monumental shift in technology and how it's being applied to everyday life, of which deep reinforcement learning is a field which has recently shown potential due to the technology available. With typical algorithms, computers are told how to deal with problems, but with deep learning computers are told to teach themselves to deal with these problems. Significant progress has already been demonstrated in experiments on the Universe platform, where agents have been trained via deep reinforcement learning to successfully play Atari games \cite{mnih2013playing}. We have looked to extend the implementation of deep reinforcement learning methods onto browser-based tasks. This introduction will give the reader an insight into the concerned technologies as well as deriving a hypothesis for the experiments to follow.
 
 \subsection{OpenAI Universe}
 Universe is a software platform developed by OpenAI built for training and measuring AI across a wide range of games, websites and other environments. Any program can be turned into a Gym (a toolkit for developing and comparing reinforcement learning algorithms) environment via this platform. It provides the agent's access to programs via a VNC client on a remote desktop (inside a Docker container), allowing the agent to perceive and act on the program the same way a human does by interpreting the pixel values of a screen and producing a combination of keyboard and/or mouse actions. 
