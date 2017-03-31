@@ -825,9 +825,10 @@ Generated states of any environment within Universe are represented as raw pixel
 	\subfloat{%
 	\includegraphics[width=1.25in]{fov.png}}\quad
 	\caption{Screen shots of different input processing techniques}
+	\label{fig:inputprocessing}
 \end{figure}
 
-Figure 2 presents three screenshots that showcases some of these experimented additions. The top left is a grayscaled and downsampled image to 84x84 pixels. Additionally, the key factor to this is that the last four frames before the current state are stacked into one image to provide directional information. The right image also uses a downsample view of the canvas. This method however makes use of an additional field-of-view, or a sort of \textit{"second eyesight"} that has a magnified view of the cursor up-close that also follows its movement. The bottom-right presents an illustration for an implementation of edge detection using the SciKit-Image library. This edge data is embedded within the pixel information in hopes to identify features (buttons, checkboxes, etc.) within the canvas more efficiently. All these processing techniques all have a general aim of providing an increased supervision to the agent in hopes of speeding up the training process.
+Figure \ref{fig:inputprocessing} presents three screenshots that showcases some of these experimented additions. The top left is a grayscaled and downsampled image to 84x84 pixels. Additionally, the key factor to this is that the last four frames before the current state are stacked into one image to provide directional information. The right image also uses a downsample view of the canvas. This method however makes use of an additional field-of-view, or a sort of \textit{"second eyesight"} that has a magnified view of the cursor up-close that also follows its movement. The bottom-right presents an illustration for an implementation of edge detection using the SciKit-Image library. This edge data is embedded within the pixel information in hopes to identify features (buttons, checkboxes, etc.) within the canvas more efficiently. All these processing techniques all have a general aim of providing an increased supervision to the agent in hopes of speeding up the training process.
 
 \subsection{Implemented models}
 One way to optimize the agents in this environment is to use on-policy and off-policy methods. On-policy methods create a policy to make decision that is being improved using the agent's action value over time. Off-policy method is more complicated in which the agent (in the context of Q-Learning) is using a second greedy policy to determine the value of its actions, regardless of what the current policy recommends \cite{sutton1998reinforcement}. The chosen models for both methods are Policy Gradient and DDQN \& DDDQN for on-policy and off-policy respectively. 
@@ -958,7 +959,14 @@ The performance of the baseline random agent also served as an indication of the
 We also found that including supervised actions to start with did not significantly increase the long-term performance of the agent.
 
 \subsection{Limitations}
-
+\subsubsection{Narrow action space}
+MWOB has various categories of environments, such as dragging, clicking, typing. However, as what we suggested in 3.2 Action spaces, the task we currently focused on is to click a button and we expected the agent would gradually learn to move towards said button and finally click at the proper position. This agent is not applicable for dragging tasks, in which the agent would be asked to press and hold a component in the working area, as the action space of our agent is only [up, down, left, right, click, do nothing]. Other actions such as sliding or typing have not also not yet been considered.
+\subsubsection{Complexity}
+The task environments provided by MWOB have different complexities but the task we attempted to solve is comparatively simple. In some tasks, the agent needs to learn how to decide where to click among 3 possible buttons (as shown on the first task in figure \ref{fig:mwob})or even to choose an option from a dropdown menu according to the task prompt.
+\subsubsection{Discrete action space}
+So far we have designed a discrete action space for our model. It is not capable of dealing with tasks involving how long we press or hold a component or how far we move the cursor. These tasks could potentially be solved by using a Deep Deterministic Policy Gradient model (see future work).
+\subsubsection{Amount of supervision}
+The only reward which leads our agent to learn is the value obtained at the end of each episode (0 to 1 upon task completion or -1 for failure or timeout). By using reward manipulation, the agent would gain reward when approaching to button, giving a potentially faster learning rate.
 \section{Conclusion and future work}
 \subsection{Conclusion}
 Following from the analysis of our results, we can conclude that...
@@ -1184,23 +1192,6 @@ As we have only experimented on environments where clicking an object is the goa
 % simpler here.)
 %\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{mshell}}]{Michael Shell}
 % or if you just want to reserve a space for a photo:
-
-%\begin{IEEEbiography}{Michael Shell}
-%Biography text here.
-%\end{IEEEbiography}
-
-% if you will not have a photo at all:
-%\begin{IEEEbiographynophoto}{John Doe}
-%Biography text here.
-%\end{IEEEbiographynophoto}
-
-% insert where needed to balance the two columns on the last page with
-% biographies
-%\newpage
-
-%\begin{IEEEbiographynophoto}{Jane Doe}
-%Biography text here.
-%\end{IEEEbiographynophoto}
 
 % You can push biographies down or up by placing
 % a \vfill before or after them. The appropriate
