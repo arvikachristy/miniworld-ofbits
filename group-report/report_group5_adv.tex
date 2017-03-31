@@ -843,7 +843,14 @@ The training procedure for these agents were primarily run over a server that co
 \section{Analysis}
 
 \subsection{Limitations}
-
+\subsubsection{Narrow action space}
+MWOB has various environments including dragging ,clicking ,typing etc.However,as what we suggested in 3.2 Action space the task we currently focused on is to click a button and we expect the agent would learn to move toward button and finally click at the proper position.This agent is not applicable for draging task in which agent will be asked to press and hold a component in the working area as the action space of our agent is only [up , down , left , right ,click ,do nothing].Other actions such as holding or typing have not considered yet.
+\subsubsection{Complexity}
+The task environment provided by MWOB has different complexity but the task we attempt to solve is relatively simple one.In some tasks,the agent need to learn how to decide where to click among  3 possible buttons (as shown on the first task in figure 1 )or even to choose an option from a dropdown menu according to the task prompt.
+\subsubsection{Discrete action space}
+So far we have designed discrete action space for our model .It is not capable of dealing with task involving how long we press or hold a component ,how far we move the cursor.These tasks can be solved by using DDPG model.
+\subsubsection{Amount of supervision}
+The only reward which leads our agent to learn is the 1 when achieving task or -1 for failure or timeout.By using reward manipulation ,the agent can gain reward when approaching to button
 \section{Conclusion and future work}
 \subsection{Conclusion}
 Following from the analysis of our results, we can conclude that...
