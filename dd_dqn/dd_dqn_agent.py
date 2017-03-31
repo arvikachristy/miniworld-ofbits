@@ -378,7 +378,7 @@ def sampleAction(sess, raw_s, s, prevX, prevY, mainQN, num_actions, epsilon, ste
         print action_numbers[a_num]
     return a_num
 
-def addReward(r, ep_num, rewards, successes, fails, misses):
+def addReward(r, rewards, successes, fails, misses):
     if r == 0:
         misses += 1
         print 'Miss'
@@ -388,7 +388,7 @@ def addReward(r, ep_num, rewards, successes, fails, misses):
     else:
         fails += 1
         print 'Fail'
-    rewards.append([ep_num, r])
+    rewards.append(r)
     return rewards, successes, fails, misses
 
 def discountEpsilon(epsilon, step_drop, end_epsilon):
@@ -460,7 +460,7 @@ def dd_dqn_main():
     num_episodes = 7000 # How many episodes of game environment to train network with.
     pre_train_steps = 5000 # How many steps of random actions before training begins.
     pre_anneling_steps = 50000 # How many steps of training before decaying epsilon
-    num_supervised_episodes = 1000 # How many episodes to train on supervised actions.
+    num_supervised_episodes = 0 # How many episodes to train on supervised actions.
     h_size = 512 # The size of the final convolutional layer before splitting it into Advantage and Value streams.
     tau = 0.001 # Rate to update target network toward primary network
     num_actions = 6
@@ -579,7 +579,7 @@ def dd_dqn_main():
                     raw_s1, r, d, info = env.step([a])
                 s1 = processState(raw_s1, zoom_to_cursor, include_rgb, include_prompt, prevY, prevX)
                 if r[0] > 0:
-                    r_scaled = r[0]#*pos_reward_mult
+                    r_scaled = r[0]*pos_reward_mult
                 else:
                     r_scaled = r[0]#-1#
                 episodeBuffer.add(np.reshape(np.array([s,a_num,r_scaled,s1,d[0]]),[1,5])) #Save the experience to our episode buffer.
@@ -597,14 +597,15 @@ def dd_dqn_main():
                 rAll += r[0]
                 
                 if d[0] == True:
+                    print '.....', ep_num, r
                     total_steps += step_num
                     print 'Steps taken this episode:', step_num
                     if r[0] == 0 or abs(r[0]) > 1:
                         ep_num_offset += 1
                     else:
-                        rewards, successes, fails, misses = addReward(r[0], ep_num, rewards, successes, fails, misses)
+                        rewards, successes, fails, misses = addReward(r[0], rewards, successes, fails, misses)
                         if save_history:
-                            history_writer.saveEpisode(ep_num, r[0])
+                            history_writer.saveEpisode(r[0])
                         if tboard_summaries:
                             episode_summary = tf.Summary()
                             episode_summary.value.add(simple_value=r[0], tag="Reward")

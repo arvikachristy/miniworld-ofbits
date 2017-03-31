@@ -18,6 +18,7 @@ class Output:
         self.rewardFileName = rewardFileName + nextAvailableFileNumber + ".txt"
         self.summaryFileName = summaryFileName + nextAvailableFileNumber + ".txt"
         self.rewards = []
+        self.epNum = 0
 
     # Return the smallest available integer (None, 2, 3,...) which, when appended to reward and summary filenames,
     # avoids name clashes with existing files.
@@ -47,22 +48,23 @@ class Output:
         self.rewardFile.close()
         self.summaryFile.close()
 
-    def addReward(self, episode, reward):
+    def addReward(self, reward):
+        self.epNum += 1
         self.rewards.append(reward)
-        self.rewardFile.write(str(episode) + "\t" + str(reward) + "\n")
+        self.rewardFile.write(str(self.epNum) + "\t" + str(reward) + "\n")
 
-    def addSummary(self, episode):
+    def addSummary(self):
         self.summaryFile.write(
-            str(episode) + "\t" +
+            str(self.epNum) + "\t" +
                 str(np.mean(self.rewards[-10:])) + "\t" +
                 str(np.mean(self.rewards[-100:])) + "\t" +
                 str(np.mean(self.rewards[-1000:])) + "\n")
 
-    def saveEpisode(self,episode,reward):
+    def saveEpisode(self, reward):
         self.open()
-        self.addReward(episode, reward)
-        if episode % self.summaryFreq == 0:
-            self.addSummary(episode)
+        self.addReward(reward)
+        if self.epNum % self.summaryFreq == 0:
+            self.addSummary()
         self.close()
 
 
