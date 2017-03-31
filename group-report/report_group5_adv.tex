@@ -552,16 +552,16 @@ pdfkeywords={Computer Society, IEEEtran, journal, LaTeX, paper,
 % journal papers have the author affiliations above the "Manuscript
 % received ..."  text while in non-compsoc journals this is reversed. Sigh.
 
-\author{Minttu Alakuijala, Vika Christy, Rajind Karunaratne, Jamie Law, Yuhang Xu, and Jun Wang
+\author{Minttu Alakuijala, Vika Christy, Rajind Karunaratne, Jamie Law, Yuhang Xu, and Jun Wang}
         %and~Jane~Doe,~\IEEEmembership{Life~Fellow,~IEEE}% <-this % stops a space
-\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem M. Shell was with the Department
-of Electrical and Computer Engineering, Georgia Institute of Technology, Atlanta,
-GA, 30332.\protect\\
+%\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem M. Shell was with the Department
+%of Electrical and Computer Engineering, Georgia Institute of Technology, Atlanta,
+%GA, 30332.\protect\\
 % note need leading \protect in front of \\ to get a newline within \thanks as
 % \\ is fragile and will error, could use \hfil\break instead.
-E-mail: see http://www.michaelshell.org/contact.html
-\IEEEcompsocthanksitem J. Doe and J. Doe are with Anonymous University.}% <-this % stops a space
-\thanks{Manuscript received April 19, 2005; revised August 26, 2015.}}
+%E-mail: see http://www.michaelshell.org/contact.html
+%\IEEEcompsocthanksitem J. Doe and J. Doe are with Anonymous University.}% <-this % stops a space
+%\thanks{Manuscript received April 19, 2005; revised August 26, 2015.}}
 
 % note the % following the last \IEEEmembership and also \thanks - 
 % these prevent an unwanted space from occurring between the last author name
@@ -584,8 +584,8 @@ E-mail: see http://www.michaelshell.org/contact.html
 
 
 % The paper headers
-\markboth{Journal of \LaTeX\ Class Files,~Vol.~14, No.~8, August~2015}%
-{Shell \MakeLowercase{\textit{et al.}}: Bare Advanced Demo of IEEEtran.cls for IEEE Computer Society Journals}
+%\markboth{Journal of \LaTeX\ Class Files,~Vol.~14, No.~8, August~2015}%
+%{Shell \MakeLowercase{\textit{et al.}}: Bare Advanced Demo of IEEEtran.cls for IEEE Computer Society Journals}
 % The only time the second header will appear is for the odd numbered pages
 % after the title page when using the twoside option.
 % 
@@ -624,7 +624,7 @@ E-mail: see http://www.michaelshell.org/contact.html
 % in the abstract or keywords.
 \IEEEtitleabstractindextext{%
 \begin{abstract}
-Deep learning is an emerging field that has shown many recent breakthroughs due to advances in computing power, algorithms and the scale of data sets. Within reinforcement learning, deep learning has shown to be effective in game-like environments. The purpose of this study is to investigate the effectiveness of deep reinforcement learning on Mini World of Bits, a novel benchmark developed by OpenAI. This benchmark serves as a starting point for reinforcement learning approaches to website interaction -- which, if mastered, would strongly signal development towards automating tasks on real-world websites. Ultimately, being able to learn sophisticated sequences of tasks required by browser interaction is a marker of progress towards general artificial intelligence. We look at adapting and evaluating Deep Q Networks and Policy Gradient algorithms for this benchmark and measuring each model's success based on rewards from the environments, looking towards a positive trend through the training process. [potential conclusion based on results]
+Deep learning is an emerging field that has shown many recent breakthroughs due to advances in computing power, algorithms and the scale of data sets. Within reinforcement learning, deep learning has shown to be effective in game-like environments. The purpose of this study is to investigate the effectiveness of deep reinforcement learning on Mini World of Bits, a novel benchmark developed by OpenAI. This benchmark serves as a starting point for reinforcement learning approaches to website interaction -- which, if mastered, would strongly signal development towards automating tasks on real-world websites. Ultimately, being able to learn sophisticated sequences of tasks required by browser interaction is a marker of progress towards general artificial intelligence. We look at adapting and evaluating Deep Q-networks and Policy Gradient algorithms for this benchmark and measuring each model's success based on rewards from the environments, looking towards a positive trend through the training process. [potential conclusion based on results]
 \end{abstract}
 
 % Note that keywords are not normally used for peerreview papers.
@@ -692,10 +692,10 @@ Reinforcement learning%, action spaces, policy gradient, DQN, DDPG?
 % 
 % Here we have the typical use of a "T" for an initial drop letter
 % and "HIS" in caps to complete the first word.
-\IEEEPARstart{O}{ver} the past few years, there has been a monumental shift in technology and how it's being applied to everyday life, of which deep reinforcement learning is a field which has recently shown potential due to the technology available. With traditional algorithms, computers are explicitly told how to solve a problem, but with deep learning, they are able to teach themselves how to deal with these problems. Significant progress has already been demonstrated in experiments on the Universe platform, where agents have been trained using deep reinforcement learning to successfully play Atari games \cite{mnih2013playing}. We have looked into extending the implementation of deep reinforcement learning methods into browser-based tasks. This introduction will give the reader an insight into the concerned technologies as well as deriving a hypothesis for the experiments to follow.
+\IEEEPARstart{O}{ver} the past few years, there has been a monumental shift in technology and how it's being applied to everyday life, of which deep reinforcement learning (RL) is a field which has recently shown potential due to the technology available. With traditional algorithms, computers are explicitly told how to solve a problem, but with deep learning, they are able to teach themselves how to deal with these problems. At its simplest, the goal in RL is to determine an optimal way for an agent to act in an environment to achieve maximal reward. Significant progress has already been demonstrated in experiments on the Universe platform, where agents have been trained using deep reinforcement learning to successfully play Atari games \cite{mnih2013playing}. We have looked into extending the implementation of deep reinforcement learning methods into browser-based tasks. This introduction will give the reader an insight into the concerned technologies as well as derive a hypothesis for the experiments to follow.
 
 \subsection{OpenAI Universe}
-Universe is a software platform developed by OpenAI for training intelligent agents and measuring their performance across a wide range of games and websites. On this platform, any program can be turned into a Gym environment, a toolkit for developing and comparing reinforcement learning algorithms. Gym provides agents access to programs via a VNC client on a remote desktop inside a Docker container. This allows the agent to perceive and act on the program the same way a human does by interpreting the pixel values of a screen and producing a combination of keyboard and/or mouse actions in response.
+Universe is a software platform developed by OpenAI for training intelligent agents and measuring their performance across a wide range of games and websites. On this platform, any program can be turned into a Gym environment, a toolkit for developing and comparing reinforcement learning algorithms. Gym provides agents access to programs via a VNC client on a remote desktop running inside a Docker container. This allows the agent to perceive and act on the program the same way a human does by interpreting the pixel values of a screen and producing a combination of keyboard and/or mouse actions in response.
 
 The ultimate goal of Universe is to develop a single agent that can apply all of its previous experiences to quickly adapt to and master other unfamiliar environments, which would demonstrate monumental progress towards general intelligence. This differs from other systems which typically fall into the category of "Narrow AI", meaning that they perform well in a specific domain but struggle to adapt to other problems.
 
@@ -714,17 +714,90 @@ Mini World of Bits (MWoB) \cite{mwob} is a new testbed which consists of a wide 
 We have looked into MWoB due to its novelty: no results have yet been published for this benchmark. By contrast, significant progress has been demonstrated using deep reinforcement learning in other Universe environments such as Atari and Flash games \cite{mnih2013playing}.
 
 \subsection{Hypothesis}
-Due to the success of deep reinforcement learning in other experiments, we believe that Deep Q Networks, Vanilla Policy Gradient and Deep Deterministic Policy Gradient algorithms would be effective in MWoB. In full information environments, i.e. in tasks whose complete state can be observed from its current visual representation, these models should be able to sufficiently capture the underlying Markov Decision Process. By contrast, in tasks where the agent requires an awareness of past states, models such as Recurrent Neural Networks or Long Short-Term Memory units which can capture time dependency would be needed. An example of such an environment within MWoB would be a task where two buttons must be pressed in a particular order, and where no visual feedback is given on whether or not the first button has already been pressed.
+Due to the success of deep reinforcement learning in other experiments, we believe that Deep Q-networks, Vanilla Policy Gradient and Deep Deterministic Policy Gradient algorithms would be effective in MWoB. In perfect information environments, i.e. in tasks whose complete state can be observed from its current visual representation, these models should be able to sufficiently capture the underlying Markov Decision Process. Conversely, in tasks where the agent requires an awareness of past states, models which can capture time dependency, such as Recurrent Neural Networks or Long Short-Term Memory units, would be needed. An example of such an environment within MWoB would be a task where two buttons must be pressed in a particular order, and where no visual feedback is given on whether or not the first button has already been pressed.
 
 \section{Related work}
-Subsection text here.
+Various approaches have been used to tackle the RL problem.
+The main difference between these algorithms is whether they aim to explicitly capture the transition dynamics of the environment, or whether they approximate an action policy or an action-value function directly and thus sidestep the problem of uncertainty arising from an unknown environment.
+%These can be roughly divided into model-based and model-free methods.
+Model-based RL relies on an explicit model of the environment, a Markov Decision Process (MDP), which captures expected rewards of being in each state as well as outgoing transition probabilities from that state given each action. If the model matches the environment, an ideal action policy can easily be sampled from the MDP. Yet, for most interesting problems, the dynamics of the environment are unknown. In this case, a model can be approximated using a deep neural network.
+
+However, the more complicated the environment, the harder it is to learn an accurate representation of it. Perhaps more widespread are model-free RL methods, which, instead of environment dynamics, iterate on either a value function or directly on the agent's policy instead.
+\subsection{Policy Gradient}
+Policy gradient is an on-policy learning algorithm which trains a neural network to create a stochastic policy $\mu(a|s)$.
+%by selecting optimal actions
+%through gradient descent.
+The policy determines a probability distribution over each action $a$ in the action space given a state $s$ of the environment.
+% throughout the training process.
+%In the perfect world,
+The policy is iteratively refined using temporal difference (TD) learning and gradient descent.
+The agent detects the wrong action with negative reward and detects the correct action with positive reward. Throughout the training process, the chance of choosing the optimal action increases.
+%In the Mini World of Bits benchmark, the goal is to move the cursor to the specified target (button or text box) as close as possible and reward the agent if it manages to hit the button and learn from the chosen action'€™s reward. 
+%\\In this research, the vanilla Policy Gradient was chosen as the main on-policy approach. To get a basic vanilla Policy Gradient to work, we had to do some visual manipulation to the state and use discrete action spaces with a Convolutional Neural Network (CNN) as the policy. At first, we tried to use a fully connected network as the policy, however the network has too many parameters and is more difficult to train whereas CNN considers neighbouring pixels to shrink down the calculation time and space.
+
+\subsection{Q-learning}
+Among most notable variants of model-free RL is Q-learning, which learns an action-value function $Q^\pi(s, a)$, representing how much value the agent predicts to receive in the long run from taking action $a$ in state $s$ and following policy $\pi$ thereafter. For a time step $t$, $Q^\pi$ is defined as \[Q^\pi(s_t, a_t) = r_t + \gamma Q^\pi(s_{t+1}, a_{t+1})\] where $r_t$ is the reward received after taking action $a, s_{t+1}$ the state transitioned to, and $\gamma$ the discount factor [0, 1], which determines the importance of future rewards relative to current ones. The optimal action is selected by calculating the Q-value of each possible action in the current state, and choosing the highest value at a given state in time. This Q-function is updated at each time step in order to eventually converge to an optimal policy.
+
+The agent is trained by a TD update on the Q-function:
+
+\begin{align*}
+Q\left( \mbox{S}_{t},\; A_{t} \right)\; &\leftarrow\;Q\left( \mbox{S}_{t},\; A_{t} \right)\;\\ 
+&+\; \alpha_{t}\left[ R_{t+1}\; +\; \gamma \max _{a}Q\left( \mbox{S}_{t+1},\; A \right)\; -\; Q\left( \mbox{S}_{t},\; A_{t} \right) \right]
+\end{align*}
+We shall break down this equation as follows:
+\indent
+\begin{itemize}
+\item \({{S}}_{{t}}\) : The state at a given time \textit{t}.
+\item \({{A}}_{{t}}\) : The action performed on state S at time \textit{t}.
+\item \({{\alpha}}_{{t}}\) : The learning rate (or step size). This is initially set to 1 and slowly converges to a value close to 0. This rate determines to what extent is the Q-function still learning and changes to its policy. Once it converges to its designed minimum, the agent will not continue to learn.
+\item \({{R}}_{{t+1}}\) : The Reward obtained from a given time \textit{t+1}
+\item \({\gamma}\) : The discount factor. This is a set constant between the range of 0 to 1, and this determines to what extent future rewards are taken into consideration. For example, a \(\gamma\) of 0 means future rewards are neglected, whereas a \(\gamma\) of 1 means future rewards matter.
+\item \(\max _{a}Q\left( \mbox{S}_{t+1},\; A \right)\) : This retrieves the Q-value of the action with the highest value within a set of actions \textit{A} for state \textit{S}
+\end{itemize}
+
+
+Q-learning can converge on optimal action-selection policy for a discrete MDP, however, it is less suitable than policy gradient methods to be adapted for continuous action domains.
+
+\subsubsection{Deep Q-learning}
+For an environment with discrete states, the Q-function can be implemented as a lookup table. However, the problem with naive Q-learning is that dynamic environments can exhibit a large scope of state-action pairs, and without any form of generalization, iterating through each possible state-action pair is highly impractical. There is also the caveat where slight changes to the Q-values can result in significant changes to the policy that can diverge the optimization of the Q-function. In such a case, neural networks can be used as a function approximator with weights \(\theta\) to help stabilize estimations of the action-value function. This form of agent is referred to as a \textbf{Deep Q-network}\cite{deepqlearning},
+%serving as the primary architecture of our off-policy implementation.
+There are three main components to the Deep Q-network as follows:
+\begin{itemize}
+\item \textbf{Convolutional Neural Network} : 
+The main Q-network adapts the model of a Convolutional Neural Network (CNN). This performs feed-forward operations by reading through the pixel information stored within the tuples, performing calculations over a series of convolution layers with a final output of Q-values over a set of actions \(A\). It is using this CNN that interprets a generalization to the state-action pairs by updating through the weight parameters \(\theta\).\linebreak
+
+\item \textbf{Target Network} :
+We make use of a secondary neural network that is nothing more than a duplicate of the Q-Network mentioned above, but with its parameters \(\theta\) copied over a cycle of n number of steps. The Q-values produced from this network is used to assist with computation of the Loss function. For a target network with parameters \(\theta ^{-}\) and Q-network with parameters \(\theta\), the target value is defined as follows :
+\begin{align*}
+T_{DQN}\; = ( R\; +\; \lambda \max _{a}Q\left( \mbox{S}_{t+1},\; A_{t+1},\; \theta ^{-} \right)
+\end{align*}
+
+With the loss function defined as follows:
+\begin{align*}
+L\left( \theta  \right)\; =\; \mbox{E}_{\mbox{S},A,\mbox{S}_{t+1},R,D}\; \cdot \; \left[ \left(T_{DQN}\; -\; Q\left( \mbox{S},\; A,\; \theta  \right) \right)^{2}\right]
+\end{align*}
+This target network assists with stabilizing the convergence of the Q-values.
+\end{itemize}
+
+Experience Replay : Before the training process, an agent stores its experiences during each time step \textit{e(t)} in the form of a tuple represented as (\({{S}}_{{t}}\), \({{A}}_{{t}}\), \({{R}}_{{t+1}}\), \({{S}}_{{t+1}}\), \(d\)), with \(d\) a boolean variable signifying if the step completes the episode. These tuples are all stored in a replay memory \(D\) for a certain initial capacity. When the training process begins, the agent samples a batch of tuples from \(D\) that is fed onto a multi-layered neural network calculate predictions and update the Q-function for every \textit{e(t)}.\linebreak
+
+\subsubsection{Dueling Deep Q-Learning}
+The only difference to this architecture is that the single output layer from the CNN is explicitly split into two streams (state-value and advantage), which is then re-combined to produce the final action-value function \[Q(a,s) = V(s) + A(a)\] The rest of the Reinforcement Learning architecture remains intact.
+
+\subsubsection{Double Deep Q-learning}
+One feature of the DQN uses a max operator to select and evaluate actions upon a given state with the target network. The problem with this approach is that this can lead to selection of overestimated values, which can delay the time in learning the optimal policy. A simple fix to this, referred to as the Double Deep Q-Network \cite{doubledeepqlearning}, uses a different equation to update the target value :
+\begin{align*}
+T_{DDQN}\; =\; R\; +\; \lambda Q\left( \mbox{S}_{t+1},\; \mbox{argmax}Q\left( \mbox{S}_{t+1},\; a,\; \theta ^{-} \right),\; \theta ^{-} \right)
+\end{align*}
+
+\subsection{Supervised learning with reinforcement learning}
 
 \section{Methodology}
 
 \subsection{Environments}
 The benchmark consists of 80 environments, which are written in a combination of HTML, JavaScript and CSS, although the agents can not perceive this information via Universe. Each environment is a 210px by 160px webpage, where the yellow section indicates the task prompt and the white section is the canvas area for performing the task (examples of environments can be seen in figure \ref{fig:mwob}). The agents receive visual information which are the raw pixel values of the webpage and then attempt to produce a combination of keyboard or mouse actions to attempt to complete the task. They also receive a reward value based on the task progress, ranging 0 to 1 if the task is completed (dependent on the time taken for completion) and -1 if the task is failed or time has run out.
 
-Due to time restriction, we had to be selective on choosing some of the MWoB environments that we were going to experiment with. There exist four types of environment such as click tasks, drag tasks, mouse tasks and other tasks. In this research, the main goal is to tackle the click tasks problems. Within the click tasks problem, we eliminated some of the environments that require Natural Language Processing such as \textit{"word-matching"} or \textit{"colour-matching"} as it would be more difficult to develop. At the end, as shown in figure \ref{fig:chosen-envi}, three environments were chosen; click the button, focus into the textbox, and close the dialog box.
+Due to time restriction, we had to be selective on choosing some of the MWoB environments that we were going to experiment with. There exist four types of environment such as click tasks, drag tasks, mouse tasks and other tasks. In this research, the main goal was to tackle the click tasks problems. Within the click tasks problem, we eliminated some of the environments that require Natural Language Processing such as \textit{"word-matching"} or \textit{"colour-matching"} as it would be more difficult to implement. At the end, as shown in figure \ref{fig:chosen-envi}, three environments were chosen; click the button, focus into the textbox, and close the dialog box.
 
 All three environments have similar tasks that are achievable by creating a policy that clicks on the right area with the coordinate x and y as the 2D action space. Unfortunately, due to its early stage release, the environment source code has not been released yet by Open AI, which has consequently resulted in a restrictive exploration on the environment modification for this research. Therefore, the research is solely focusing on training the agents on the available environments using different models and techniques.
 \begin{figure}
@@ -757,70 +830,25 @@ Generated states of any environment within Universe are represented as raw pixel
 Figure 2 presents three screenshots that showcases some of these experimented additions. The top left is a grayscaled and downsampled image to 84x84 pixels. Additionally, the key factor to this is that the last four frames before the current state are stacked into one image to provide directional information. The right image also uses a downsample view of the canvas. This method however makes use of an additional field-of-view, or a sort of \textit{"second eyesight"} that has a magnified view of the cursor up-close that also follows its movement. The bottom-right presents an illustration for an implementation of edge detection using the SciKit-Image library. This edge data is embedded within the pixel information in hopes to identify features (buttons, checkboxes, etc.) within the canvas more efficiently. All these processing techniques all have a general aim of providing an increased supervision to the agent in hopes of speeding up the training process.
 
 \subsection{Implemented models}
-One way to optimize the agents in this environment is to use on-policy and off-policy methods. On-policy methods create a policy to make decision that is being improved using the agentï¿½ï¿½s action value over time. Off-policy method is more complicated in which the agent (in the context of Q-Learning) is using a second greedy policy to determine the value of its actions, regardless of what the current policy recommends \cite{sutton1998reinforcement}. The chosen models for both methods are Policy Gradient and DDQN \& DDDQN for on-policy and off-policy respectively. 
+One way to optimize the agents in this environment is to use on-policy and off-policy methods. On-policy methods create a policy to make decision that is being improved using the agent's action value over time. Off-policy method is more complicated in which the agent (in the context of Q-Learning) is using a second greedy policy to determine the value of its actions, regardless of what the current policy recommends \cite{sutton1998reinforcement}. The chosen models for both methods are Policy Gradient and DDQN \& DDDQN for on-policy and off-policy respectively. 
 \subsubsection{On-policy methods}  
-Different action for each agent produces different rewards. One action may grant the agent positive reward if it'ï¿½ï¿½s the correct move or negative reward if it'ï¿½ï¿½s the incorrect move. In the on-policy method, we make sure the agent learns how to create a policy by choosing the optimal solution over time. There are multiple methods that implement an on-policy approach, however we are going to focus on one of the widely-used approaches, policy gradient.
+Different action for each agent produces different rewards. One action may grant the agent positive reward if it's the correct move or negative reward if it's the incorrect move. In the on-policy method, we make sure the agent learns how to create a policy by choosing the optimal solution over time. There are multiple methods that implement an on-policy approach, however we are going to focus on one of the widely-used approaches, policy gradient.
 \paragraph{\bf Policy Gradient}
 In this research, Vanilla Policy Gradient was chosen as the main on-policy approach. Vanilla PG is relatively easier to implement and suits the environment as it supports arbitrary number of actions. On top of that, the most important advantage of this approach is that it does not depend on the adjustment of the policy therefore more secure to be used for several policies \cite{Peters:2010}. However, in some cases a more filtered and chosen adjustment of the policy sometimes has the potential to perform better with a more complicated implementation.
-\\It is quite challenging to fit Vanilla Policy Gradient without any support into the MWoB environment. Hence, visual manipulation to the initial input state had to be done such as cropping, transforming colour to greyscale and edge detection technique. At first, fully connected network was chosen as the policy, nonetheless the network has too much parameters and more difficult to train. Therefore, Convolutional Neural Network(CNN) was preferred as it considers neighbouring pixels to shrink down the calculation time and space. 
-\\To achieve the right input for the MWoB and Gym environment, TensorFlow played a crucial role to simplify and shaping the agentâ€™s input and output. Tensorflow was used to implement the CNN equivalence in much easier step such as expanding the network into additional layers, modifying input, and adding/updating functions. On top of that, the advantage of using TensorFlow is its ability to produce TensorBoard to track the agentâ€™s variable performance in a form of graph.
-\\\\
+
+It is quite challenging to fit Vanilla Policy Gradient without any support into the MWoB environment. Hence, visual manipulation to the initial input state had to be done such as cropping, transforming colour to greyscale and edge detection technique. At first, fully connected network was chosen as the policy, nonetheless the network has too much parameters and more difficult to train. Therefore, Convolutional Neural Network(CNN) was preferred as it considers neighbouring pixels to shrink down the calculation time and space.
+
+To achieve the right input for the MWoB and Gym environment, TensorFlow played a crucial role to simplify and shaping the agent's input and output. Tensorflow was used to implement the CNN equivalence in much easier step such as expanding the network into additional layers, modifying input, and adding/updating functions. On top of that, the advantage of using TensorFlow is its ability to produce TensorBoard to track the agent's variable performance in a form of graph.
+
 \subsubsection{Off-policy methods}  
-\paragraph{\bf Q Learning}
-When we consider off-policy Temporal Difference (TD) control, a common method is through Q-Learning. Q Learning comprises of an action-value function that, when optimized, assists to find an optimal action-selection policy for a discrete MDP (this is where the compatibility for discrete action spaces come into play). This is through selection of actions with the highest Q value at a given state in time. In a formal sense, the Q function can be defined as :
-\begin{align*}
-Q\left( \mbox{S}_{t},\; A_{t} \right)\; &\leftarrow\;Q\left( \mbox{S}_{t},\; A_{t} \right)\;\\ 
-&+\; \alpha_{t}\left[ R_{t+1}\; +\; \gamma \max _{a}Q\left( \mbox{S}_{t+1},\; A \right)\; -\; Q\left( \mbox{S}_{t},\; A_{t} \right) \right]
-\end{align*}
-We shall break down this equation as follows :
-\indent
-\begin{itemize}
-\item \({{S}}_{{t}}\) : The state at a given time \textit{t}.
-\item \({{A}}_{{t}}\) : The action performed on state S at time \textit{t}.
-\item \({{\alpha}}_{{t}}\) : The learning rate (or step size). This is initially set to 1 and slowly converges to a value close to 0. This rate determines to what extent is the Q function still learning and changes to its policy. Once it converges to its designed minimum, the agent will not continue to learn.
-\item \({{R}}_{{t+1}}\) : The Reward obtained from a given time \textit{t+1}
-\item \({\gamma}\) : The discount factor. This is a set constant between the range of 0 to 1, and this determines to what extent future rewards are taken into consideration. For example, a \(\gamma\) of 0 means future rewards are neglected, whereas a \(\gamma\) of 1 means future rewards matter.
-\item \(\max _{a}Q\left( \mbox{S}_{t+1},\; A \right)\) : This retrieves the Q-value of the action with the highest value within a set of actions \textit{A} for state \textit{S}
-\end{itemize}
+\paragraph{\bf Q-learning}
 
-This Q-Learning function is iterated through every episode in the environment to eventually slowly converge to an optimal policy.
+\paragraph{\bf Deep Q-learning}
 
-\paragraph{\bf Deep Q Learning}
-The problem with such naive-iteration is that due to the dynamic nature of the environments, this can present a large scope of state-action pairs without any form of generalization, and the nature of iterating through each state-action pair for a given state is highly impractical. There is also the caveat where slight changes to the Q-values can result in significant changes to the policy that can diverge the optimization of the Q function. In such a case, we refer to a neural network as a function approximator with weights \(\theta\) to help stabilize estimations of the action-value function. This form of agent is referred to as a \textbf{Deep Q Network}\cite{deepqlearning}, serving as the primary architecture of our off-policy implementation. There are three main components to the Deep Q Network as follows:
-\begin{itemize}
-\item \textbf{Experience Replay} : Before the training process, an agent stores its experiences during each time step \textit{e(t)} in the form of a tuple represented as (\({{S}}_{{t}}\), \({{A}}_{{t}}\), \({{R}}_{{t+1}}\), \({{S}}_{{t+1}}\), \(d\)), with \(d\) a boolean variable signifying if the step completes the episode. These tuples are all stored in a replay memory \(D\) for a certain initial capacity. When the training process begins, the agent samples a batch of tuples from \(D\) that is fed onto a multi-layered neural network calculate predictions and update the Q-function for every \textit{e(t)}.\linebreak
+\paragraph{\bf Dueling Deep Q-learning}
 
-\item \textbf{Convolutional Neural Network} : 
-The main Q-network adapts the model of a Convolutional Neural Network (CNN). This performs feed-forward operations by reading through the pixel information stored within the tuples, performing calculations over a series of convolution layers with a final output of Q-values over a set of actions \(A\). It is using this CNN that interprets a generalization to the state-action pairs by updating through the weight parameters \(\theta\).\linebreak
+\paragraph{\bf Double Deep Q-learning}
 
-\item \textbf{Target Network} :
-We make use of a secondary neural network that is nothing more than a duplicate of the Q-Network mentioned above, but with its parameters \(\theta\) copied over a cycle of n number of steps. The Q-values produced from this network is used to assist with computation of the Loss function. For a target network with parameters \(\theta ^{-}\) and Q-network with parameters \(\theta\), the target value is defined as follows :
-\begin{align*}
-T_{DQN}\; = ( R\; +\; \lambda \max _{a}Q\left( \mbox{S}_{t+1},\; A_{t+1},\; \theta ^{-} \right)
-\end{align*}
-
-With the loss function defined as follows:
-\begin{align*}
-L\left( \theta  \right)\; =\; \mbox{E}_{\mbox{S},A,\mbox{S}_{t+1},R,D}\; \cdot \; \left[ \left(T_{DQN}\; -\; Q\left( \mbox{S},\; A,\; \theta  \right) \right)^{2}\right]
-\end{align*}
-This target network assists with stabilizing the convergence of the Q-values.
-\end{itemize}
-
-\subsubsection{Dueling Deep Q Learning}
-The only difference to this architecture is that the single output layer from the CNN is explicitly split into two streams (state-value and advantage), which is then re-combined using an equation to produce the final prediction for a set of actions \(A\). The rest of the Reinforcement Learning architecture remains intact.
-
-\begin{figure}[h!]
-\centering
-	\includegraphics[width=0.7\columnwidth, keepaspectratio]{dueling.png}
-	\caption{A visual illustration comparing the regular DQN (top) and Dueling DQN \cite{dueling} (bottom)}
-	\label{fig:dueling}
-\end{figure}
-
-\subsubsection{Double Deep Q Learning}
-One feature of the DQN uses a max operator to select and evaluate actions upon a given state with the target network. The problem with this approach is that this can lead to selection of overestimated values, which can delay the time in learning the optimal policy. A simple fix to this, referred to as the Double Deep Q-Network \cite{doubledeepqlearning}, uses a different equation to update the target value :
-\begin{align*}
-T_{DDQN}\; =\; R\; +\; \lambda Q\left( \mbox{S}_{t+1},\; \mbox{argmax}Q\left( \mbox{S}_{t+1},\; a,\; \theta ^{-} \right),\; \theta ^{-} \right)
-\end{align*}
 
 \subsection{Reward manipulation}
 The current reward system for any given environment follows the agenda that if the agent completes the designated task within a certain time limit, it receives a positive reward signal between 0 to 1 (depending on how much time was remaining). Otherwise, it would receive a negative reward signal of -1 if the agent fails to complete the task on time. \linebreak
@@ -830,17 +858,104 @@ One approach we looked into are additional reward manipulation techniques added 
 Inversely, we also try to provide positive reward signals if the cursor performed progressive steps towards completion of the task. For example, one of the environments involved clicking a randomly generated button within the canvas. One of the algorithms keep record of the current position of the generated button, and sets up a proximity area around the button, for if the button were to perform an action that would result in the position of the cursor to move closer towards the button, would in turn receive a positive reward signal of +0.1 added to the final cumulative reward. \linebreak
 
 \subsection{Supervised methods}
+Inspired by Inverse Reinforcement Learning, 
+%TODO: cite
+ we investigated approaches to imitation learning. By observing supervised optimal actions, the agent learns the reward function of the environment before learning the optimal policy to optimize for this reward function. While our method of sampling ideal actions was not necessarily scalable to other environments, it gave us evidence on whether the amount of positive episodes was a limiting factor in agent learning performance.
 
 \subsection{Metrics}
+To convey a complete picture, we ran each agent through a standard evaluation framework to ensure results between environments and training methods were consistent and could be compared with each other. The metrics we chose included actions per episode, percentage of successful episodes, and mean episode reward. The single most telling of these is, of course, mean reward. However, we felt that only looking at the mean reward does not accurately represent how much better the agent is performing if it is to be able to complete the task than if it did not manage to not complete it at all within the 10 second time frame. A negative mean reward could, in fact, obscure the fact that more than two thirds of the episodes were successful, as the relative weight of a late success is much smaller than that of a miss, -1.
 
 \subsection{Training Setup}
-The training procedure for these agents were primarily run over a server that comprised of an Nvidia TITAN X GPU. We compiled and installed the TensorFlow library to take advantage of additional CPU instructions (SSE4.2,AVX2 and FMA), as well as additional GPU capabilities, such as the Nvidia CUDA platform. These optimizations were to ensure we were reaching as much benefit of performance enhancements as possible for added efficiency to training. The results of all our agents were logged and visualized using the in-built TensorBoard to analyze performance of the agents
+The training procedure for these agents were primarily run over a server that comprised of an Nvidia TITAN X GPU. We compiled and installed the TensorFlow library to take advantage of additional CPU instructions (SSE4.2, AVX2 and FMA), as well as additional GPU capabilities, such as the Nvidia CUDA platform. These optimizations were to ensure we were reaching as much benefit of performance enhancements as possible for added efficiency to training. The results of all our agents were logged and visualized using the in-built TensorBoard to analyze performance of the agents
 
-\subsection{Benchmarks}
 
 \section{Results}
 
+To evaluate our models, we trained them for 3000 episodes on each of the three environments introduced in section 3.1. A typical learning process is depicted in Figure \ref{fig:tboard}. In 3000 episodes, the mean reward rises from around 0 to around 0.4. Any fluctuations in the training process are due to the inherent randomness of the environment, such as the distance from the cursor to the generated button, and the size of said button.  
+
+For comparison, we included an agent which samples each action uniformly at random. For our agents to add value, they would need to outperform said random agent. Tables \ref{results-clicktest}, \ref{results-focustext} and \ref{results-closedialog}, demonstrate a performance improvement of x\% over the random baseline.
+
+\begin{figure}[h!]
+\centering
+	\includegraphics[width=\columnwidth, keepaspectratio]{learningcurve.png}
+	\caption{A typical learning curve of our DQN agent on the ClickTest-v0 environment, plotted as a reward over episode and smoothed for clarity.}
+	\label{fig:tboard}
+\end{figure}
+
+\begin{table}[!t]
+%% increase table row spacing, adjust to taste
+\renewcommand{\arraystretch}{1.3}
+% if using array.sty, it might be a good idea to tweak the value of
+% \extrarowheight as needed to properly center the text within the cells
+\caption{Results on ClickTest-v0}
+\label{results-clicktest}
+\centering
+%% Some packages, such as MDW tools, offer better commands for making tables
+%% than the plain LaTeX2e tabular which is used here.
+\begin{tabular}{|c||c|c|}
+\hline
+Agent & Reward & Success rate \% \\
+\hline
+Random agent & 0.1626 & 64.30\\
+\hline
+Dueling DQN & &\\
+\hline
+Double Dueling DQN & 0.2437 & 78.47\\
+
+\hline
+Policy Gradient & &\\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[!t]
+%% increase table row spacing, adjust to taste
+\renewcommand{\arraystretch}{1.3}
+\caption{Results on FocusText-v0}
+\label{results-focustext}
+\centering
+\begin{tabular}{|c||c|c|}
+\hline
+Agent & Mean reward & Success rate (\%) \\
+\hline
+Random agent & &\\
+\hline
+Dueling DQN & &\\
+\hline
+Double Dueling DQN & &\\
+\hline
+Policy Gradient &  &\\
+\hline
+\end{tabular}
+\end{table}
+
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Results on CloseDialog-v0}
+\label{results-closedialog}
+\centering
+\begin{tabular}{|c||c|c|}
+\hline
+Agent & Reward & Success rate \% \\
+\hline
+Random agent & &\\
+\hline
+Dueling DQN & &\\
+\hline
+Double Dueling DQN & &\\
+\hline
+Policy Gradient & &\\
+\hline
+\end{tabular}
+\end{table}
+
+
 \section{Analysis}
+%suggestions:
+The performance of the baseline random agent also served as an indication of the overall difficulty of the environments.
+
+We also found that including supervised actions to start with did not significantly increase the long-term performance of the agent.
 
 \subsection{Limitations}
 
@@ -1070,22 +1185,22 @@ As we have only experimented on environments where clicking an object is the goa
 %\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{mshell}}]{Michael Shell}
 % or if you just want to reserve a space for a photo:
 
-\begin{IEEEbiography}{Michael Shell}
-Biography text here.
-\end{IEEEbiography}
+%\begin{IEEEbiography}{Michael Shell}
+%Biography text here.
+%\end{IEEEbiography}
 
 % if you will not have a photo at all:
-\begin{IEEEbiographynophoto}{John Doe}
-Biography text here.
-\end{IEEEbiographynophoto}
+%\begin{IEEEbiographynophoto}{John Doe}
+%Biography text here.
+%\end{IEEEbiographynophoto}
 
 % insert where needed to balance the two columns on the last page with
 % biographies
 %\newpage
 
-\begin{IEEEbiographynophoto}{Jane Doe}
-Biography text here.
-\end{IEEEbiographynophoto}
+%\begin{IEEEbiographynophoto}{Jane Doe}
+%Biography text here.
+%\end{IEEEbiographynophoto}
 
 % You can push biographies down or up by placing
 % a \vfill before or after them. The appropriate
