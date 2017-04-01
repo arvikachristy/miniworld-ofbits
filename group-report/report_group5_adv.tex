@@ -718,7 +718,7 @@ Due to the success of deep reinforcement learning in other experiments, we belie
 
 \section{Related work}
 Various approaches have been used to tackle the RL problem.
-The main difference between these algorithms is whether they aim to explicitly capture the transition dynamics of the environment, or whether they approximate an action policy or an action-value function directly and thus sidestep the problem of uncertainty arising from an unknown environment.
+The key distinctive feature between these algorithms is whether they aim to explicitly capture the transition dynamics of the environment, or whether they approximate an action policy or an action-value function directly and thus sidestep the problem of uncertainty arising from an unknown environment.
 %These can be roughly divided into model-based and model-free methods.
 Model-based RL relies on an explicit model of the environment, a Markov Decision Process (MDP), which captures expected rewards of being in each state as well as outgoing transition probabilities from that state given each action. If the model matches the environment, an ideal action policy can easily be sampled from the MDP. Yet, for most interesting problems, the dynamics of the environment are unknown. In this case, a model can be approximated using a deep neural network.
 
