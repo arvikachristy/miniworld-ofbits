@@ -453,21 +453,22 @@ def dd_dqn_main():
     env_name = 'wob.mini.ClickTest-v0'
     batch_size = 32 # How many experiences to use for each training step.
     update_freq = 4 # How often to perform a training step.
-    y = .99 # Discount factor on the target Q-values
+    y = .9 # Discount factor on the target Q-values
     start_epsilon = 1 # Starting chance of random action
     end_epsilon = 0.1 # Final chance of random action
-    anneling_steps = 300000. # How many steps of training to reduce startE to endE.
-    num_episodes = 7000 # How many episodes of game environment to train network with.
+    anneling_steps = 900000. # How many steps of training to reduce startE to endE.
+    num_episodes = 15000 # How many episodes of game environment to train network with.
     pre_train_steps = 5000 # How many steps of random actions before training begins.
     pre_anneling_steps = 50000 # How many steps of training before decaying epsilon
     num_supervised_episodes = 0 # How many episodes to train on supervised actions.
+    experience_buffer_size = 15000 # How many past steps are stored in the buffer at any one time.
     h_size = 512 # The size of the final convolutional layer before splitting it into Advantage and Value streams.
     tau = 0.001 # Rate to update target network toward primary network
     num_actions = 6
     step_size = 15 # How many pixels to move in one action
     cursor_height = 15
     cursor_width = 7
-    pos_reward_mult = 100
+    pos_reward_mult = 1
 
     load_model = False # Whether to load a saved model.
     checkpoint_path, evaluation_path, tboard_path = getOutputDirNames()
@@ -520,7 +521,7 @@ def dd_dqn_main():
     trainables = tf.trainable_variables()
     targetOps = updateTargetGraph(trainables,tau)
 
-    myBuffer = ExperienceBuffer()
+    myBuffer = ExperienceBuffer(experience_buffer_size)
     rewards = []
 
     #Set the rate of random action decrease. 
@@ -550,7 +551,7 @@ def dd_dqn_main():
         s, info, currentX, currentY, ep_num_offset = initEnvironment(env, save_history)
 
         while ep_num < num_episodes:
-            episodeBuffer = ExperienceBuffer()
+            episodeBuffer = ExperienceBuffer(experience_buffer_size)
             raw_s = getValidObservation(env, currentX, currentY)
             prevX, prevY = currentX, currentY
             s = processState(raw_s, zoom_to_cursor, include_rgb, include_prompt, prevY, prevX)
