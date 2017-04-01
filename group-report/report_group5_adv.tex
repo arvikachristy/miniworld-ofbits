@@ -967,9 +967,17 @@ We also found that including supervised actions to start with did not significan
 
 \subsection{Limitations}
 
-Our agent learns under a model-free environment which means limited infromation about environment(only one reward and image of section where cursor can move) can be viewed .By taking advantage of source code of openai environment provided by andrej later,we can learning more information about the environment such as telling which is best policy in training process and speed up training process by using reward manipulation.
+\subsubsection{Insufficient hardware}
+The model combine convolutional neural network with reinforcement learning ,providing a good generalization of methodology against clicking task.However,it also requires longer training process to train the parameters in the model (the fully connected layers and convolution kernel of convolutional neural network ).We are currently training on machine with only one GPU and if using a machine even a cluster of machines with more GPUs(saying 10)  .our training process can achieve higher efficiency.
 
-Due to the complexity of combination of CNN and reinforcement learning,a machine even a cluster of machines with more GPUs  is always sought. 
+\subsubsection{Lack of environment source code}
+Our agent learns under a model-free environment which means limited infromation about environment(only one reward and image of section where cursor can move) can be viewed .By taking advantage of source code of openai environment provided by andrej later,the agent  can fully know about the environment such as what kind of html components are  there and where they locate ,size of them and even  best policy in each step during training process thus  speed up training process by using reward manipulation.Also ,with help of model-based environment ,we can analyses training process by recording  and illustrating more critiria (not just reward). 
+\subsubsection{unexceptedly runtime error }
+Above these ,there are still some factors can potentially affect our training ,such as the error "reward falling behind" or frame loss .
+
+
+
+
 \section{Conclusion and future work}
 \subsection{Conclusion}
 Following from the analysis of our results, we can conclude that...
