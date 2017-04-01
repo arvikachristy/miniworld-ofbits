@@ -734,7 +734,7 @@ The policy determines a probability distribution over each action $a$ in the act
 %In the perfect world,
 The policy is iteratively refined using temporal difference (TD) learning and the network is trained using gradient descent.
 The agent detects the wrong action by receiving a negative reward and the correct action by a positive reward. Throughout the training process, the chance of choosing the optimal action increases.
-%In the Mini World of Bits benchmark, the goal is to move the cursor to the specified target (button or text box) as close as possible and reward the agent if it manages to hit the button and learn from the chosen action'€™s reward. 
+%In the Mini World of Bits benchmark, the goal is to move the cursor to the specified target (button or text box) as close as possible and reward the agent if it manages to hit the button and learn from the chosen action'ï¿½ï¿½s reward. 
 %\\In this research, the vanilla Policy Gradient was chosen as the main on-policy approach. To get a basic vanilla Policy Gradient to work, we had to do some visual manipulation to the state and use discrete action spaces with a Convolutional Neural Network (CNN) as the policy. At first, we tried to use a fully connected network as the policy, however the network has too many parameters and is more difficult to train whereas CNN considers neighbouring pixels to shrink down the calculation time and space.
 
 \subsection{Q-learning}
@@ -961,14 +961,10 @@ The performance of the baseline random agent also served as an indication of the
 We also found that including supervised actions to start with did not significantly increase the long-term performance of the agent.
 
 \subsection{Limitations}
-\subsubsection{Narrow action space}
-MWOB has various categories of environments, such as dragging, clicking, typing. However, as what we suggested in 3.2 Action spaces, the task we currently focused on is to click a button and we expected the agent would gradually learn to move towards said button and finally click at the proper position. This agent is not applicable for dragging tasks, in which the agent would be asked to press and hold a component in the working area, as the action space of our agent is only [up, down, left, right, click, do nothing]. Other actions such as sliding or typing have not also not yet been considered.
-\subsubsection{Complexity}
-The task environments provided by MWOB have different complexities but the task we attempted to solve is comparatively simple. In some tasks, the agent needs to learn how to decide where to click among 3 possible buttons (as shown on the first task in figure \ref{fig:mwob})or even to choose an option from a dropdown menu according to the task prompt.
-\subsubsection{Discrete action space}
-So far we have designed a discrete action space for our model. It is not capable of dealing with tasks involving how long we press or hold a component or how far we move the cursor. These tasks could potentially be solved by using a Deep Deterministic Policy Gradient model (see future work).
-\subsubsection{Amount of supervision}
-The only reward which leads our agent to learn is the value obtained at the end of each episode (0 to 1 upon task completion or -1 for failure or timeout). By using reward manipulation, the agent would gain reward when approaching to button, giving a potentially faster learning rate.
+
+Our agent learns under a model-free environment which means limited infromation about environment(only one reward and image of section where cursor can move) can be viewed .By taking advantage of source code of openai environment provided by andrej later,we can learning more information about the environment such as telling which is best policy in training process and speed up training process by using reward manipulation.
+
+Due to the complexity of combination of CNN and reinforcement learning,a machine even a cluster of machines with more GPUs  is always sought. 
 \section{Conclusion and future work}
 \subsection{Conclusion}
 Following from the analysis of our results, we can conclude that...
