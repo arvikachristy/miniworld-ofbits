@@ -16,45 +16,45 @@ Warning--string name "scholarpedia" is undefined
 Warning--empty journal in Peters:2010
 
 Done.
-You've used 10 entries,
+You've used 9 entries,
             4087 wiz_defined-function locations,
-            871 strings with 8840 characters,
-and the built_in function-call counts, 5522 in all, are:
-= -- 424
-> -- 159
-< -- 21
-+ -- 80
-- -- 35
-* -- 278
-:= -- 916
-add.period$ -- 18
-call.type$ -- 10
-change.case$ -- 7
+            866 strings with 8680 characters,
+and the built_in function-call counts, 5007 in all, are:
+= -- 379
+> -- 146
+< -- 20
++ -- 74
+- -- 32
+* -- 250
+:= -- 816
+add.period$ -- 16
+call.type$ -- 9
+change.case$ -- 6
 chr.to.int$ -- 30
-cite$ -- 11
-duplicate$ -- 426
-empty$ -- 444
-format.name$ -- 42
-if$ -- 1232
+cite$ -- 10
+duplicate$ -- 385
+empty$ -- 404
+format.name$ -- 38
+if$ -- 1120
 int.to.chr$ -- 0
-int.to.str$ -- 10
-missing$ -- 90
-newline$ -- 63
-num.names$ -- 8
-pop$ -- 233
+int.to.str$ -- 9
+missing$ -- 82
+newline$ -- 58
+num.names$ -- 7
+pop$ -- 215
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 2
-skip$ -- 421
+skip$ -- 382
 stack$ -- 0
-substring$ -- 85
-swap$ -- 304
-text.length$ -- 11
+substring$ -- 84
+swap$ -- 277
+text.length$ -- 10
 text.prefix$ -- 0
 top$ -- 5
-type$ -- 10
+type$ -- 9
 warning$ -- 1
-while$ -- 13
-width$ -- 12
-write$ -- 120
+while$ -- 12
+width$ -- 10
+write$ -- 108
 (There were 2 warnings)
