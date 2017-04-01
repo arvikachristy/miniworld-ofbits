@@ -723,6 +723,8 @@ The main difference between these algorithms is whether they aim to explicitly c
 Model-based RL relies on an explicit model of the environment, a Markov Decision Process (MDP), which captures expected rewards of being in each state as well as outgoing transition probabilities from that state given each action. If the model matches the environment, an ideal action policy can easily be sampled from the MDP. Yet, for most interesting problems, the dynamics of the environment are unknown. In this case, a model can be approximated using a deep neural network.
 
 However, the more complicated the environment, the harder it is to learn an accurate representation of it. Perhaps more widespread are model-free RL methods, which, instead of environment dynamics, iterate on either a value function or directly on the agent's policy instead.
+
+For any successful RL agent, an important consideration is the balance between exploitation, i.e. extracting the maximum reward out of the environment according to current knowledge, and exploration, in which suboptimal actions are sampled to try to discover new ways to achieve even greater reward. A common strategy is epsilon-greedy, meaning that a random action is chosen with a probability of $\epsilon$, and the remaining actions are greedily sampled from the agent's current approximation. To enable convergence, $\epsilon$ is decayed over time from an initial value of 1 to a near-zero end value.
 \subsection{Policy Gradient}
 Policy gradient is an on-policy learning algorithm which trains a neural network to create a stochastic policy $\mu(a|s)$.
 %by selecting optimal actions
