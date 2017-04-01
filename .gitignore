@@ -7,6 +7,8 @@ group-report/*.aux
 group-report/*.log
 group-report/*.pdf
 group-report/*.synctex.gz
+group-report/*.blg
+group-report/*.bbl
 
 # Agent evaluation and log files
 *evaluation
