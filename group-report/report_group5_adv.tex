@@ -722,37 +722,27 @@ The key distinctive feature between these algorithms is whether they aim to expl
 %These can be roughly divided into model-based and model-free methods.
 Model-based RL relies on an explicit model of the environment, a Markov Decision Process (MDP), which captures expected rewards of being in each state as well as outgoing transition probabilities from that state given each action. If the model matches the environment, an ideal action policy can easily be sampled from the MDP. Yet, for most interesting problems, the dynamics of the environment are unknown. In this case, a model can be approximated using a deep neural network.
 
-However, the more complicated the environment, the harder it is to learn an accurate representation of it. Perhaps more widespread are model-free RL methods, which, instead of environment dynamics, iterate on either a value function or directly on the agent's policy instead.
+However, the more complicated the environment, the harder it is to learn an accurate representation of it. Perhaps more widespread are model-free RL methods, which, instead of environment dynamics, iterate on either a value function (off-policy learning) \cite{watkins1989learning} or directly on the agent's policy (on-policy learning) \cite{sutton1999policy}.
 
-For any successful RL agent, an important consideration is the balance between exploitation, i.e. extracting the maximum reward out of the environment according to current knowledge, and exploration, in which suboptimal actions are sampled to try to discover new ways to achieve even greater reward. A common strategy is epsilon-greedy, meaning that a random action is chosen with a probability of $\epsilon$, and the remaining actions are greedily sampled from the agent's current approximation. To enable convergence, $\epsilon$ is decayed over time from an initial value of 1 to a near-zero end value.
+For any successful RL agent, an important consideration is the balance between exploitation, i.e. extracting the maximum reward out of the environment according to current knowledge, and exploration, in which suboptimal actions are sampled to try to discover new ways to achieve even greater reward. A common strategy is epsilon-greedy \cite{sutton1998reinforcement}, meaning that a random action is chosen with a probability of $\epsilon$, and the remaining actions are greedily sampled from the agent's current approximation. To enable convergence, $\epsilon$ is decayed over time from an initial value of 1 to a near-zero end value.
 \subsection{Policy Gradient}
-Policy gradient is an on-policy learning algorithm which trains a neural network to create a stochastic policy $\mu(a|s)$.
-%by selecting optimal actions
-%through gradient descent.
-The policy determines a probability distribution over each action $a$ in the action space given a state $s$ of the environment.
-% throughout the training process.
-%In the perfect world,
-The policy is iteratively refined using temporal difference (TD) learning and the network is trained using gradient descent.
-The agent detects the wrong action by receiving a negative reward and the correct action by a positive reward. Throughout the training process, the chance of choosing the optimal action increases.
+Policy gradient is an on-policy learning algorithm which trains a neural network to create a parametrized stochastic policy $\pi(a|s)$ \cite{sutton1999policy}.
+The policy $\pi$ determines a probability distribution over each action $a$ in the action space given a state $s$ of the environment.
+The policy is iteratively refined using temporal difference (TD) learning \cite{sutton1988learning} and the network is trained using gradient descent.
+During training, rewards received from the environment are used to adjust the policy's parameters such that the probability of actions leading to positive rewards grows and the probability of actions inducing negative rewards is reduced accordingly.
 %In the Mini World of Bits benchmark, the goal is to move the cursor to the specified target (button or text box) as close as possible and reward the agent if it manages to hit the button and learn from the chosen action'��s reward. 
 %\\In this research, the vanilla Policy Gradient was chosen as the main on-policy approach. To get a basic vanilla Policy Gradient to work, we had to do some visual manipulation to the state and use discrete action spaces with a Convolutional Neural Network (CNN) as the policy. At first, we tried to use a fully connected network as the policy, however the network has too many parameters and is more difficult to train whereas CNN considers neighbouring pixels to shrink down the calculation time and space.
 
 \subsection{Q-learning}
-Among most notable variants of model-free RL is Q-learning, which learns an action-value function $Q^\pi(s, a)$, representing how much value the agent predict it will receive in the long run from taking action $a$ in state $s$ and following policy $\pi$ thereafter. For a time step $t$, $Q^\pi$ is defined as \[Q^\pi(s_t, a_t) = r_t + \gamma Q^\pi(s_{t+1}, a_{t+1})\] where $r_t$ is the reward received after taking action $a, s_{t+1}$ the state transitioned to, and $\gamma$ the discount factor [0, 1], which determines the importance of future rewards relative to current ones. The optimal action is selected by calculating the Q-value of each possible action in the current state, and choosing the highest value at a given state in time. This Q-function is updated at each time step in order to eventually converge to an optimal policy.
-
-The agent is trained by a TD update on the Q-function:
+Another notable variant of model-free RL is Q-learning\cite{watkins1989learning}, which approximates an action-value function $Q(S, A)$, representing how much value the agent predicts it will receive in the long run from taking action $A$ in state $S$. For a time step $t$, $Q$ is defined as \[Q(S_t, A_t) = R_t + \gamma Q(S_{t+1}, A_{t+1})\] where $R_t$ is the reward received after taking action $A; S_{t+1}$ the state transitioned to; and $\gamma$ the discount factor [0, 1], which determines the importance of future rewards relative to current ones.  A \(\gamma\) of 0 causes future rewards beyond the current time step to be neglected, whereas a \(\gamma\) of 1 gives a distant future reward equal weight as a reward in the near future. An action is selected by calculating the maximum Q-value of the action space in the current state. In order to eventually converge at an optimal policy, the Q-function is updated by minimising TD error at each time step $t$:
 \begin{align*}
 Q\left( \mbox{S}_{t},\; A_{t} \right)\; &\leftarrow\;Q\left( \mbox{S}_{t},\; A_{t} \right)\;\\ 
 &+\; \alpha_{t}\left[ R_{t+1}\; +\; \gamma \max _{a}Q\left( \mbox{S}_{t+1},\; A \right)\; -\; Q\left( \mbox{S}_{t},\; A_{t} \right) \right]
 \end{align*}
-We shall break down this equation as follows:
 \indent
+consisting of:
 \begin{itemize}
-\item \({{S}}_{{t}}\) : The state at a given time \textit{t}.
-\item \({{A}}_{{t}}\) : The action performed on state S at time \textit{t}.
 \item \({{\alpha}}_{{t}}\) : The learning rate (or step size). This is initially set to 1 and slowly converges to a value close to 0. This rate determines to what extent is the Q-function still learning and changes to its policy. Once it converges to its designed minimum, the agent will not continue to learn.
-\item \({{R}}_{{t+1}}\) : The Reward obtained from a given time \textit{t+1}
-\item \({\gamma}\) : The discount factor. This is a set constant between the range of 0 to 1, and this determines to what extent future rewards are taken into consideration. For example, a \(\gamma\) of 0 means future rewards are neglected, whereas a \(\gamma\) of 1 means future rewards matter.
 \item \(\max _{a}Q\left( \mbox{S}_{t+1},\; A \right)\) : This retrieves the Q-value of the action with the highest value within a set of actions \textit{A} for state \textit{S}
 \end{itemize}
 
@@ -765,10 +755,10 @@ For an environment with discrete states, the Q-function can be implemented as a 
 There are three main components to the Deep Q-network as follows:
 \begin{itemize}
 \item \textbf{Convolutional Neural Network} : 
-The main Q-network is implemented as a Convolutional Neural Network (CNN). This performs feed-forward operations by applying local filter operations on incoming pixels values, performing calculations over a series of convolution layers with a final output of Q-values over a set of actions \(A\). It is using this CNN that interprets a generalization to the state-action pairs by updating the weight parameters \(\theta\).\linebreak
+The main Q-network is implemented as a Convolutional Neural Network (CNN). This performs feed-forward operations by applying local filter operations on incoming pixels values, performing calculations over a series of convolution layers with a final output of Q-values over a set of actions \(A\). It is this CNN that enables a generalization of state-action pairs in the form of network weights \(\theta\).\linebreak
 
 \item \textbf{Target Network} :
-We make use of a secondary neural network that is nothing more than a duplicate of the Q-Network mentioned above, but with its parameters \(\theta\) copied over a cycle of $n$ steps. The Q-values produced from this network are used to compute the TD loss function. For a target network with parameters \(\theta ^{-}\) and a Q-network with parameters \(\theta\), the target value is defined as follows :
+Mnih et al. make use of a secondary neural network that is, for the most part, a duplicate of the Q-Network mentioned above, but with its parameters \(\theta\) copied over with a delay of $n$ steps. The Q-values produced from this network are used to compute the TD loss function. In this way, the delay in updating the target values adds stability to the learning process. For a target network with parameters \(\theta ^{-}\) and a Q-network with parameters \(\theta\), the target value is defined as follows :
 \begin{align*}
 T_{DQN}\; = ( R\; +\; \lambda \max _{a}Q\left( \mbox{S}_{t+1},\; A_{t+1},\; \theta ^{-} \right)
 \end{align*}
@@ -778,13 +768,13 @@ With the loss function defined as follows:
 L\left( \theta  \right)\; =\; \mbox{E}_{\mbox{S},A,\mbox{S}_{t+1},R,D}\; \cdot \; \left[ \left(T_{DQN}\; -\; Q\left( \mbox{S},\; A,\; \theta  \right) \right)^{2}\right]
 \end{align*}
 
-\item \textbf{Experience Replay} : Before the training process, an agent stores its experiences during each time step \textit{e(t)} in the form of a tuple represented as (\({{S}}_{{t}}\), \({{A}}_{{t}}\), \({{R}}_{{t+1}}\), \({{S}}_{{t+1}}\), \(d\)), with \(d\) a boolean variable signifying if the step completes the episode. These tuples are stored in a replay memory \(D\) with a certain initial capacity. When the training process begins, the agent samples a batch of tuples from \(D\) that is fed onto a multi-layered neural network calculate predictions and update the Q-function for every \textit{e(t)}.
+\item \textbf{Experience Replay} : Before the training process, the agent's experiences at each time step $t$ are stored in the form of a tuple represented as (\({{S}}_{{t}}\), \({{A}}_{{t}}\), \({{R}}_{{t+1}}\), \({{S}}_{{t+1}}\), \(d\)), with \(d\) a boolean variable signifying if the step completes the episode. These tuples are stored in a replay memory \(D\) with a certain initial capacity. At every training step, the agent samples a batch of tuples from \(D\) that is fed into the network to update the Q-function.
 \end{itemize}
 
-Both the inclusion of a target network and the randomization of the order of training on experiences assist with stabilizing the convergence of the Q-values \cite{deepqlearning}. When only a single network is used both for function approximation as well as target value generation or if current experiences are directly used in training, individual trajectories of the agent in the environment are more likely to influence the target values, leading to divergence in the long run.
+Both the inclusion of a target network and the randomization of the order of experiences to train on assist with stabilizing the convergence of the Q-values \cite{deepqlearning}. When only a single network is used both for function approximation as well as target value generation or if current experiences are directly used in training, individual trajectories of the agent in the environment are more likely to influence the target values, leading to divergence in the long run.
 
 \subsubsection{Dueling Deep Q-Learning}
-Building on the DQN architecture, this approach splits the single output layer of the CNN into two streams, state-value and advantage, which are then re-combined to produce the final action-value function $Q(a,s) = V(s) + A(a | s)$. The advantage function $A(a | s)$ quantifies how much better than average it is to take action $a$ given state $s$. The rest of the Reinforcement Learning architecture remains intact.
+Building on the DQN architecture, the Dueling DQN approach \cite{wang2015dueling} splits the single output layer of the CNN into two streams, state-value $V$ and advantage $A$, which are then re-combined to produce the final action-value function $Q(a,s) = V(s) + A(a | s)$. The advantage function $A(a | s)$ quantifies how much better than average it is to take action $a$ given state $s$. The rest of the Reinforcement Learning architecture remains intact.
 
 \begin{figure}[h]
 \centering
@@ -794,7 +784,7 @@ Building on the DQN architecture, this approach splits the single output layer o
 \end{figure}
 
 \subsubsection{Double Deep Q-learning}
-One feature of the DQN uses a max operator to select and evaluate actions upon a given state with the target network. The problem with this approach is that this can lead to selection of overestimated values, which can delay the time in learning the optimal policy. A simple improvement to this, referred to as the Double Deep Q-Network \cite{doubledeepqlearning}, uses a different equation to update the target value :
+The DQN uses a max operator to select and evaluate actions upon a given state with the target network. The problem with this approach is that this can lead to selection of overestimated values, which can delay the time in learning the optimal policy. A simple improvement to this, referred to as the Double Deep Q-Network \cite{doubledeepqlearning}, uses a different equation to update the target value :
 \begin{align*}
 T_{DDQN}\; =\; R\; +\; \lambda Q\left( \mbox{S}_{t+1},\; \mbox{argmax}Q\left( \mbox{S}_{t+1},\; a,\; \theta ^{-} \right),\; \theta ^{-} \right)
 \end{align*}
@@ -926,7 +916,7 @@ Policy Gradient & &\\
 \hline
 Agent & Mean reward & Success rate (\%) \\
 \hline
-Random agent & &\\
+Random agent & 0.3375 & 79.88\\
 \hline
 Dueling DQN & &\\
 \hline
