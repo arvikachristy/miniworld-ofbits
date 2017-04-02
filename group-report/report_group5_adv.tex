@@ -734,7 +734,7 @@ During training, rewards received from the environment are used to adjust the po
 %\\In this research, the vanilla Policy Gradient was chosen as the main on-policy approach. To get a basic vanilla Policy Gradient to work, we had to do some visual manipulation to the state and use discrete action spaces with a Convolutional Neural Network (CNN) as the policy. At first, we tried to use a fully connected network as the policy, however the network has too many parameters and is more difficult to train whereas CNN considers neighbouring pixels to shrink down the calculation time and space.
 
 \subsection{Q-learning}
-Another notable variant of model-free RL is Q-learning\cite{watkins1989learning}, which approximates an action-value function $Q(S, A)$, representing how much value the agent predicts it will receive in the long run from taking action $A$ in state $S$. For a time step $t$, $Q$ is defined as \[Q(S_t, A_t) = R_t + \gamma Q(S_{t+1}, A_{t+1})\] where $R_t$ is the reward received after taking action $A; S_{t+1}$ the state transitioned to; and $\gamma$ the discount factor [0, 1], which determines the importance of future rewards relative to current ones.  A \(\gamma\) of 0 causes future rewards beyond the current time step to be neglected, whereas a \(\gamma\) of 1 gives a distant future reward equal weight as a reward in the near future. An action is selected by calculating the maximum Q-value of the action space in the current state. In order to eventually converge at an optimal policy, the Q-function is updated by minimising TD error at each time step $t$:
+Another notable variant of model-free RL is Q-learning\cite{watkins1989learning}, which approximates an action-value function $Q(S, A)$, representing how much value the agent predicts it will receive in the long run from taking action $A$ in state $S$. For a time step $t$, $Q$ is defined\cite{qlearning} as \[Q(S_t, A_t) = R_t + \gamma Q(S_{t+1}, A_{t+1})\] where $R_t$ is the reward received after taking action $A; S_{t+1}$ the state transitioned to; and $\gamma$ the discount factor [0, 1], which determines the importance of future rewards relative to current ones.  A \(\gamma\) of 0 causes future rewards beyond the current time step to be neglected, whereas a \(\gamma\) of 1 gives a distant future reward equal weight as a reward in the near future. An action is selected by calculating the maximum Q-value of the action space in the current state. In order to eventually converge at an optimal policy, the Q-function is updated by minimising TD error at each time step $t$:
 \begin{align*}
 Q\left( \mbox{S}_{t},\; A_{t} \right)\; &\leftarrow\;Q\left( \mbox{S}_{t},\; A_{t} \right)\;\\ 
 &+\; \alpha_{t}\left[ R_{t+1}\; +\; \gamma \max _{a}Q\left( \mbox{S}_{t+1},\; A \right)\; -\; Q\left( \mbox{S}_{t},\; A_{t} \right) \right]
@@ -758,7 +758,7 @@ There are three main components to the Deep Q-network as follows:
 The main Q-network is implemented as a Convolutional Neural Network (CNN). This performs feed-forward operations by applying local filter operations on incoming pixels values, performing calculations over a series of convolution layers with a final output of Q-values over a set of actions \(A\). It is this CNN that enables a generalization of state-action pairs in the form of network weights \(\theta\).\linebreak
 
 \item \textbf{Target Network} :
-Mnih et al. make use of a secondary neural network that is, for the most part, a duplicate of the Q-Network mentioned above, but with its parameters \(\theta\) copied over with a delay of $n$ steps. The Q-values produced from this network are used to compute the TD loss function. In this way, the delay in updating the target values adds stability to the learning process. For a target network with parameters \(\theta ^{-}\) and a Q-network with parameters \(\theta\), the target value is defined as follows :
+Mnih et al. make use of a secondary neural network that is, for the most part, a duplicate of the Q-Network mentioned above, but with its parameters \(\theta\) copied over with a delay of $n$ steps. The Q-values produced from this network are used to compute the TD loss function. In this way, the delay in updating the target values adds stability to the learning process. For a target network with parameters \(\theta ^{-}\) and a Q-network with parameters \(\theta\), the target value is defined in \cite{deepqlearning} as follows :
 \begin{align*}
 T_{DQN}\; = ( R\; +\; \lambda \max _{a}Q\left( \mbox{S}_{t+1},\; A_{t+1},\; \theta ^{-} \right)
 \end{align*}
@@ -768,7 +768,7 @@ With the loss function defined as follows:
 L\left( \theta  \right)\; =\; \mbox{E}_{\mbox{S},A,\mbox{S}_{t+1},R,D}\; \cdot \; \left[ \left(T_{DQN}\; -\; Q\left( \mbox{S},\; A,\; \theta  \right) \right)^{2}\right]
 \end{align*}
 
-\item \textbf{Experience Replay} : Before the training process, the agent's experiences at each time step $t$ are stored in the form of a tuple represented as (\({{S}}_{{t}}\), \({{A}}_{{t}}\), \({{R}}_{{t+1}}\), \({{S}}_{{t+1}}\), \(d\)), with \(d\) a boolean variable signifying if the step completes the episode. These tuples are stored in a replay memory \(D\) with a certain initial capacity. At every training step, the agent samples a batch of tuples from \(D\) that is fed into the network to update the Q-function.
+\item \textbf{Experience Replay} : Before the training process, the agent's experiences at each time step $t$ are stored in the form of a tuple represented as (\({{S}}_{{t}}\), \({{A}}_{{t}}\), \({{R}}_{{t+1}}\), \({{S}}_{{t+1}}\), \(d\)), with \(d\) a boolean variable signifying if the step completes the episode. These tuples are stored in a replay memory \(D\) with a certain initial capacity. At every training step, the agent samples a batch of tuples from \(D\) that is fed into the network to update the Q-function. This process was later improved upon with the introduction of \textit{Prioritized Experience Replay}\cite{per}, which makes an addition of error-indices to each tuple, representing how much this experience differs from the predictions of the policy, and stores the tuples in a binary heap tree instead of a linear buffer.
 \end{itemize}
 
 Both the inclusion of a target network and the randomization of the order of experiences to train on assist with stabilizing the convergence of the Q-values \cite{deepqlearning}. When only a single network is used both for function approximation as well as target value generation or if current experiences are directly used in training, individual trajectories of the agent in the environment are more likely to influence the target values, leading to divergence in the long run.
@@ -786,13 +786,14 @@ In scenarios with large action spaces and complicated tasks, exploring the entir
 \section{Methodology}
 
 \subsection{Environments}
-The benchmark consists of 80 environments, which are written in a combination of HTML, JavaScript and CSS, although the agents can not perceive this information via Universe. Each environment is a 210px by 160px webpage, where the yellow section indicates the task prompt and the white section is the canvas area for performing the task (examples of environments can be seen in figure \ref{fig:mwob}). The agents receive visual information in the form of raw pixel values of the webpage and can produce a combination of keyboard or mouse actions while attempting to complete the task. They also receive a reward value based on their performance, ranging 0 to 1 if the task is completed (dependent on the time taken for completion) and -1 if the task is failed or time has run out.
 
 \begin{figure}[h!]
 	\includegraphics[width=\linewidth]{chosen-envi.png}
-	\caption{Environment of: 1. Click The Button, 2. Focus Into The Textbox, 3. Close The Dialog Box}
+	\caption{Environments 1. Click The Button, 2. Focus Into The Textbox, 3. Close The Dialog Box}
 	\label{fig:chosen-envi}
 \end{figure}
+
+The benchmark consists of 80 environments, which are written in a combination of HTML, JavaScript and CSS, although the agents can not perceive this information via Universe. Each environment is a 210px by 160px webpage, where the yellow section indicates the task prompt and the white section is the canvas area for performing the task (examples of environments can be seen in figure \ref{fig:mwob}). The agents receive visual information in the form of raw pixel values of the webpage and can produce a combination of keyboard or mouse actions while attempting to complete the task. They also receive a reward value based on their performance, ranging 0 to 1 if the task is completed (dependent on the time taken for completion) and -1 if the task is failed or time has run out.
 
 To limit the scope of the problem, we chose a few environments to focus on. There are four categories of environments within WMoB: click tasks, drag tasks, mouse tasks and other tasks. For now, our main goal was to tackle click tasks problems, out of which we left out environments that require Natural Language Processing. In the following sections, we report results on three environments depicted in figure \ref{fig:chosen-envi}: click the button, focus into the textbox, and close the dialog box.
 
@@ -813,8 +814,6 @@ Of course, the above model of the action space does not address many other facto
 \subsection{Input processing}
 Generated states for any environment within Universe are represented as raw pixel data, which serve as the primary source of visual context for any agent. As this was the sole means of supervision used in the training process, we sought to investigate techniques to manipulate this data that could help provide an increase in efficiency during training. Some general methods, such as converting images from RGB to grayscale for environments that did not require color co-ordination, and downsampling images to reduce their size, decreased the amount of computation required for an agent to interpret the pixels. In addition, the pixel data was supplemented with more complex additions with the aim of providing increased contextual awareness for the agent.
 
-Figure \ref{fig:inputprocessing} presents three screen-shots that showcase some of these additions.  All these processing techniques have a general aim of providing an increased sense of supervision to the agent in hopes of speeding up the training process.
-
 \begin{figure}[h!]
 \centering
 	\subfloat{%
@@ -829,17 +828,15 @@ Figure \ref{fig:inputprocessing} presents three screen-shots that showcase some 
 	\label{fig:inputprocessing}
 \end{figure}
 
-
+Figure \ref{fig:inputprocessing} presents three screen-shots that showcase some of these additions.  All these processing techniques have a general aim of providing an increased sense of supervision to the agent in hopes of speeding up the training process.
 
 \subsection{Implemented models}
 One way to train agents on this environment is to use on-policy and off-policy methods. On-policy methods create a policy to make decisions that are improved over time using the agent's action-value function. In off-policy methods such as Q-learning, the agent is using a second greedy policy to determine the value of its actions, regardless of what the current policy recommends \cite{sutton1998reinforcement}. We chose to implement Policy Gradient algorithms (on-policy) as well as Double DQNs and Double Dueling DQNs (off-policy).
 \subsubsection{On-policy methods}  
-%Different action for each agent produces different rewards. One action may grant the agent positive reward if it's the correct move or negative reward if it's the incorrect move. In the on-policy method, we make sure the agent learns how to create a policy by choosing the optimal solution over time. There are multiple methods that implement an on-policy approach, however we are going to focus on one of the widely-used approaches, policy gradient.
-%\paragraph{\bf Policy Gradient}
-In this work, Vanilla Policy Gradient (PG) was chosen as the main on-policy approach due to its relative simplicity as well as flexibility in the selection of an action space. % the environment as it supports arbitrary number of actions.
-On top of that, a theoretical advantage of this approach is that the policy itself does not need to be parametrized, which means that any arbitrary policy can be represented \cite{Peters:2010}. %However, in some cases a more filtered and chosen adjustment of the policy sometimes has the potential to perform better with a more complicated implementation.
+In this work, Vanilla Policy Gradient (PG) was chosen as the main on-policy approach due to its relative simplicity as well as flexibility in the selection of an action space.
+On top of that, a theoretical advantage of this approach is that the policy itself does not need to be parametrized, which means that any arbitrary policy can be represented \cite{Peters:2010}.
 
-It proved challenging to fit Vanilla PG into the MWoB environment without any supporting pre-processing. Hence, we added visual manipulation to the input state, such as cropping, transforming RGB to greyscale, and corner detection. At first, we used a fully connected network as the policy approximator, but this resulted in the network having too many parameters and being more difficult to train. To resolve this, the network was replaced with a CNN which considers local neighbourhoods of pixels to shrink down the calculation time and space.
+It proved challenging to fit Vanilla PG into the MWoB environment without any supporting pre-processing. Hence, we added visual manipulation to the input state, such as cropping, converting RGB to greyscale, and corner detection. At first, we used a fully connected network as the policy approximator, but this resulted in the network having too many parameters and being more difficult to train \cite{LongSD14}. To resolve this, the network was replaced with a CNN which considers local neighbourhoods of pixels to shrink down the calculation time and space.
 
 We used TensorFlow to implement the CNN, expand the network with additional layers, train its weights, and process modify. To interface with the MWoB and Gym environments, TensorFlow played a crucial role in simplifying and shaping the agent's input and output. On top of that, TensorFlow came with the advantage of in-built TensorBoard logging to track the agent's performance throughout the training process.
 
@@ -849,7 +846,7 @@ An agent following an off-policy approach inherits the behavior of following the
 \paragraph{\bf Deep Q-learning}
 Considering the approach we took models a discrete action space, Deep Q-networks were adaptable with this environment. The incorporation of a Convolutional Neural Network (CNN) allowed us to easily feed the pixel data (having been processed with techniques mentioned above) to the network and provide predictions for a fixed number of actions. As described earlier, mouse-based controls were generalized to 5 discrete actions (with also an additional 6th for an agent to do nothing).\linebreak
 
-We did, however, encounter some issues when experimenting with the Experience Replay technique and the hyper-parameters of the agent itself. The MWoB environments have a tendency to produce states with no pixel data at all (only a [None] state) if an episode were to complete when the time elapsed. This is known nature emitted by the environment to the Universe platform and we had to decide how to deal with storing tuples if such transition arises, and if omitting this transition entirely would affect the training process of the network.
+We did, however, encounter some issues when experimenting with the Experience Replay technique and the hyper-parameters of the agent itself. The MWoB environments have a tendency to produce states with no pixel data at all (only a [None] state) if an episode were to complete when the time elapsed. This is known nature emitted by the environment to the Universe platform and we had to decide how to deal with storing tuples if such transition arises, and if omitting this transition entirely would affect the training process of the network. Another potential improvement we came across was implementing \textit{Prioritized Experience Replay} as explained above. However, calculating error-indices for tuples stored in the binary heap tree relies on positive-only rewards, which renders it infeasible for our environments, which include negative rewards.
 
 Considering that each episode within any MWoB environment includes a time limit and an adjustable frames per second variable, this added to the challenge of identifying optimal initial hyper-parameters of the network that would influence the training process (even to some extent, whether it would train at all). By default, our environment ran at 15 frames per second  -- which puts an upper limit on the frequency of the agent's actions. Within the scope of the 'Click-Test' environment, the worst-case for the number of steps per episode is 150 steps (due to the time constraint set to 10 seconds). This meant that episodes can finish rapidly, and it followed that the target network had to be updated rather quickly in order to avoid the convergence of predicted-values to 0, and a much smaller replay memory size was required for the Experience Replay process.\linebreak
 
@@ -879,16 +876,9 @@ The training procedure for these agents was primarily run on a server comprised 
 
 To evaluate our models, we trained them for 3000 episodes on each of the three environments introduced in section 3.1. A typical learning process is depicted in Figure \ref{fig:tboard}. In 3000 episodes, the mean reward rises from around 0 to around 0.4. A large part of the fluctuations in the training process can be attributed to the inherent randomness of the environment, such as the distance from the cursor to the generated button, and the size of said button.  
 
-For comparison, we included an agent which samples each action uniformly at random. For our agents to add value, they would need to outperform said random agent. Tables \ref{results-clicktest}, \ref{results-focustext} and \ref{results-closedialog}, demonstrate a performance improvement of up to 10 percent units in the percentage of successful episodes and a mean reward approximately 0.10 higher than the baseline.
+For comparison, we included an agent which samples each action uniformly at random. For our agents to add value, they would need to outperform said random agent. Tables \ref{results-clicktest}, \ref{results-focustext} and \ref{results-closedialog} demonstrate a performance improvement of up to 10 percent units in the percentage of successful episodes and a mean reward approximately 0.10 higher than the baseline.
 
-\begin{figure}[h!]
-\centering
-	\includegraphics[width=\columnwidth, keepaspectratio]{learningcurve.png}
-	\caption{A typical learning curve of our DQN agent on the ClickTest-v0 environment, plotted as reward per episode and smoothed for clarity.}
-	\label{fig:tboard}
-\end{figure}
-
-\begin{table}[!t]
+\begin{table}[!h]
 %% increase table row spacing, adjust to taste
 \renewcommand{\arraystretch}{1.3}
 % if using array.sty, it might be a good idea to tweak the value of
@@ -914,7 +904,7 @@ Policy Gradient & &\\
 \end{tabular}
 \end{table}
 
-\begin{table}[!t]
+\begin{table}[!h]
 %% increase table row spacing, adjust to taste
 \renewcommand{\arraystretch}{1.3}
 \caption{Results on FocusText-v0}
@@ -936,7 +926,7 @@ Policy Gradient &  &\\
 \end{table}
 
 
-\begin{table}[!t]
+\begin{table}[!h]
 \renewcommand{\arraystretch}{1.3}
 \caption{Results on CloseDialog-v0}
 \label{results-closedialog}
@@ -956,6 +946,15 @@ Policy Gradient & &\\
 \end{tabular}
 \end{table}
 
+\begin{figure}[h!]
+\centering
+	\includegraphics[width=\columnwidth, keepaspectratio]{learningcurve.png}
+	\caption{A typical learning curve of our DQN agent on the ClickTest-v0 environment, plotted as reward per episode and smoothed for clarity.}
+	\label{fig:tboard}
+\end{figure}
+
+
+
 
 \section{Analysis}
 %suggestions:
@@ -965,13 +964,14 @@ We also found that including supervised actions to start with did not significan
 
 \subsection{Limitations}
 
-\subsubsection{Insufficient hardware}
-The model combine convolutional neural network with reinforcement learning ,providing a good generalization of methodology against clicking task.However,it also requires longer training process to train the parameters in the model (the fully connected layers and convolution kernel of convolutional neural network ).We are currently training on machine with only one GPU and if using a machine even a cluster of machines with more GPUs(saying 10)  .our training process can achieve higher efficiency.
+\subsubsection{Hardware capability}
+Our models combine CNNs with reinforcement learning, providing a good generalisation of methodologies against the clicking tasks. However, it also requires a longer and more intensive training process to train the parameters in the model (the fully connected layers and convolution kernel of the CNN). We are currently training on a machine with only one GPU therefore the training process would hypothetically achieve higher efficiency if a machine (or even a cluster of machines) with multiple GPUs is used instead.
 
 \subsubsection{Lack of environment source code}
-Our agent learns under a model-free environment which means limited infromation about environment(only one reward and image of section where cursor can move) can be viewed .By taking advantage of source code of openai environment provided by andrej later,the agent  can fully know about the environment such as what kind of html components are  there and where they locate ,size of them and even  best policy in each step during training process thus  speed up training process by using reward manipulation.Also ,with help of model-based environment ,we can analyses training process by recording  and illustrating more critiria (not just reward). 
-\subsubsection{unexceptedly runtime error }
-Above these ,there are still some factors can potentially affect our training ,such as the error "reward falling behind" or frame loss .
+Our agent learns under a model-free environment which means limited information access about the environments (only one reward value and image of the section where cursor can move). By taking advantage of source code of the benchmark provided by Dr. Andrej Karpathy later, the agent could be adapted to fully know and interpret certain aspects about the environment, such as what kind of html components there are and their positions/sizes or even the best policy in each step during training process, thus speeding up the training process by using reward manipulation. Also, with the help of a model-based environment, we could analyse the training process by recording and illustrating more criteria (not just the reward value). 
+
+\subsubsection{Runtime errors}
+Above this all, there are still some other factors which have affected our training identified within the Universe platform messages, such as the error "reward falling behind"/"throttler fell behind by X seconds" or frame loss.
 
 
 
