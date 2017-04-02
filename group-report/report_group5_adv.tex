@@ -957,13 +957,14 @@ We also found that including supervised actions to start with did not significan
 
 \subsection{Limitations}
 
-\subsubsection{Insufficient hardware}
-The model combine convolutional neural network with reinforcement learning ,providing a good generalization of methodology against clicking task.However,it also requires longer training process to train the parameters in the model (the fully connected layers and convolution kernel of convolutional neural network ).We are currently training on machine with only one GPU and if using a machine even a cluster of machines with more GPUs(saying 10)  .our training process can achieve higher efficiency.
+\subsubsection{Hardware capability}
+Our models combine CNNs with reinforcement learning, providing a good generalisation of methodologies against the clicking tasks. However, it also requires a longer and more intensive training process to train the parameters in the model (the fully connected layers and convolution kernel of the CNN). We are currently training on a machine with only one GPU therefore the training process would hypothetically achieve higher efficiency if a machine (or even a cluster of machines) with multiple GPUs is used instead.
 
 \subsubsection{Lack of environment source code}
-Our agent learns under a model-free environment which means limited infromation about environment(only one reward and image of section where cursor can move) can be viewed .By taking advantage of source code of openai environment provided by andrej later,the agent  can fully know about the environment such as what kind of html components are  there and where they locate ,size of them and even  best policy in each step during training process thus  speed up training process by using reward manipulation.Also ,with help of model-based environment ,we can analyses training process by recording  and illustrating more critiria (not just reward). 
-\subsubsection{unexceptedly runtime error }
-Above these ,there are still some factors can potentially affect our training ,such as the error "reward falling behind" or frame loss .
+Our agent learns under a model-free environment which means limited information access about the environments (only one reward value and image of the section where cursor can move). By taking advantage of source code of the benchmark provided by Dr. Andrej Karpathy later, the agent could be adapted to fully know and interpret certain aspects about the environment, such as what kind of html components there are and their positions/sizes or even the best policy in each step during training process, thus speeding up the training process by using reward manipulation. Also, with the help of a model-based environment, we could analyse the training process by recording and illustrating more criteria (not just the reward value). 
+
+\subsubsection{Runtime errors}
+Above this all, there are still some other factors which have affected our training identified within the Universe platform messages, such as the error "reward falling behind"/"throttler fell behind by X seconds" or frame loss.
 
 
 
