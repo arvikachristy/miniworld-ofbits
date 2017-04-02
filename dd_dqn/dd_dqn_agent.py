@@ -45,7 +45,6 @@ class QLearner():
             height = 105
             pool1_ksize_y = 8
         self.imageIn = tf.placeholder(shape=[None, height, 80, z], dtype=tf.float32)
-        print self.imageIn
 
         if four_convs:
             self.conv1 = tf.contrib.layers.convolution2d( \
@@ -173,7 +172,7 @@ def updateTarget(sess, op_holder):
     for op in op_holder:
         sess.run(op)
 
-def intToVNCAction(a, include_stay, x, y, step_size):
+def intToVNCAction(a, x, y, step_size):
     minY = 125
     maxY = 285
     minX = 10
@@ -194,7 +193,7 @@ def intToVNCAction(a, include_stay, x, y, step_size):
     elif a == 4:
         if x + step_size <= maxX:
             return [universe.spaces.PointerEvent(x + step_size, y, 0)], x + step_size, y
-    elif a == 5 and include_stay:
+    elif a == 5:
         return [universe.spaces.PointerEvent(x, y, 0)], x, y
     print 'Cannot take action (', a, ')'
     return [], x, y
@@ -236,22 +235,32 @@ def softMax(xs):
     e_xs = np.exp(xs - np.max(xs))
     return e_xs / e_xs.sum()
 
-def chooseActionFromSingleQOut(singleQOut, use_probs, print_softmax):
+def linearDistribution(xs):
+    if np.min(xs) < 0:
+        xs += 1.01 * abs(np.min(xs))
+    #print xs, '\t', xs / xs.sum()
+    return xs / xs.sum()
+
+def chooseActionFromSingleQOut(singleQOut, use_probs, use_softmax, print_probs):
     unique = np.unique(singleQOut)
     if len(unique) == 1:
         return np.random.randint(0, len(singleQOut))
     elif use_probs:
-        if print_softmax:
-            print 'softmax', softMax(singleQOut), '\n'
-        return np.random.choice(range(len(singleQOut)), p=softMax(singleQOut))
+        if use_softmax:
+            probs = softmax(singleQOut)
+        else:
+            probs = linearDistribution(singleQOut) 
+        if print_probs:
+            print 'probs', probs, '\n'
+        return np.random.choice(range(len(singleQOut)), p=probs)
     else:
         return np.argmax(singleQOut, 0)
 
-def chooseActionFromQOut(QOut, use_probs, print_softmax):
+def chooseActionFromQOut(QOut, use_probs, use_softmax, print_probs):
     if QOut.ndim == 1:
-        return chooseActionFromSingleQOut(QOut, use_probs, print_softmax)
+        return chooseActionFromSingleQOut(QOut, use_probs, use_softmax, print_probs)
     else:
-        return [chooseActionFromSingleQOut(q, use_probs, print_softmax) for q in QOut]
+        return [chooseActionFromSingleQOut(q, use_probs, use_softmax, print_probs) for q in QOut]
 
 def isValidObservation(s):
     return s is not None and len(s) > 0 and s[0] is not None and type(s[0]) == dict and 'vision' in s[0]
@@ -349,7 +358,8 @@ def generateSupervisedAction(s, prevX, prevY, cursorH, cursorW, step_size, inclu
             print 'UP'
             return 1 # UP
 
-def sampleAction(sess, raw_s, s, prevX, prevY, mainQN, num_actions, epsilon, step_num, total_steps, pre_train_steps, supervised_episode, stochastic_policy, include_prompt, cursorH, cursorW, step_size=15):
+def sampleAction(sess, raw_s, s, prevX, prevY, mainQN, num_actions, epsilon, step_num, total_steps, pre_train_steps, \
+                 supervised_episode, stochastic_policy, use_softmax, include_prompt, cursorH, cursorW, step_size=15):
     # TODO:
     # check if s needs to be unprocessed
     
@@ -367,16 +377,19 @@ def sampleAction(sess, raw_s, s, prevX, prevY, mainQN, num_actions, epsilon, ste
 
     if np.random.rand(1) < epsilon or total_steps < pre_train_steps:
         a_num = np.random.randint(0, num_actions)
+        QOut, Value, Advantage = [], [], []
     else:
         QOut = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:[s]})[0]
         Value = sess.run(mainQN.Value,feed_dict={mainQN.imageIn:[s]})[0]
         Advantage = sess.run(mainQN.Advantage, feed_dict={mainQN.imageIn:[s]})[0]
+        #print 'V, A before QOut calculation:', Value, Advantage
+        #QOut = Value + tf.subtract(Advantage, tf.reduce_mean(Advantage, reduction_indices=1, keep_dims=True))
         print QOut, 'V', Value, 'A', Advantage
-        a_num = chooseActionFromQOut(QOut, stochastic_policy, print_softmax=True)
+        a_num = chooseActionFromQOut(QOut, stochastic_policy, use_softmax, print_probs=True)
         print step_num, 'Decided',
         action_numbers = {0: 'CLICK', 1: 'UP', 2: 'DOWN', 3: 'LEFT', 4: 'RIGHT', 5: 'STAY'}
         print action_numbers[a_num]
-    return a_num
+    return a_num, QOut, Value, Advantage
 
 def addReward(r, rewards, successes, fails, misses):
     if r == 0:
@@ -396,9 +409,9 @@ def discountEpsilon(epsilon, step_drop, end_epsilon):
         epsilon -= step_drop
     return epsilon
 
-def trainQNs(sess, mainQN, targetQN, stochastic_policy, trainBatch, batch_size, y):
+def trainQNs(sess, mainQN, targetQN, stochastic_policy, use_softmax, trainBatch, batch_size, y):
     QOut1 = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:np.stack(trainBatch[:,3])})
-    Q1 = chooseActionFromQOut(QOut1, stochastic_policy, print_softmax=False)
+    Q1 = chooseActionFromQOut(QOut1, stochastic_policy, use_softmax, print_probs=False)
     Q2 = sess.run(targetQN.QOut,feed_dict={targetQN.imageIn:np.stack(trainBatch[:,3])})
     end_multiplier = -(trainBatch[:,4] - 1)
     doubleQ = Q2[range(batch_size),Q1]
@@ -439,7 +452,7 @@ def loadModel(sess, saver, checkpoint_path):
     ckpt = tf.train.get_checkpoint_state(checkpoint_path)
     saver.restore(sess, ckpt.model_checkpoint_path)
 
-def plotVision(s, include_rgb):
+def plotVision(s, include_rgb, show_heatmap, prevX, prevY, step_size, Q):
     plt.close()
     if include_rgb:
         plt.imshow(s)
@@ -447,22 +460,34 @@ def plotVision(s, include_rgb):
         # Drop last dimension (of length 1)
         s = s.reshape(s.shape[:-1])
         plt.imshow(s, cmap='gray')
+        if show_heatmap:
+            #xs = [prevX, ]
+            #ys = 
+            print 'Q before', Q
+            Q /= np.max(Q)
+            print 'Q intermediate', Q
+            Q += np.min(Q)
+            print 'Q after', Q
+            for action in range(0, 5):
+                _, x, y = intToVNCAction(action, prevX, prevY, step_size)
+                plt.scatter(x, y, s=5, c='red', alpha=Q[action])
     plt.show(block=False)
+
 
 def dd_dqn_main():
     env_name = 'wob.mini.ClickTest-v0'
     batch_size = 32 # How many experiences to use for each training step.
     update_freq = 4 # How often to perform a training step.
-    y = .9 # Discount factor on the target Q-values
+    y = .99 # Discount factor on the target Q-values
     start_epsilon = 1 # Starting chance of random action
     end_epsilon = 0.1 # Final chance of random action
-    anneling_steps = 900000. # How many steps of training to reduce startE to endE.
+    anneling_steps = 900#000. # How many steps of training to reduce startE to endE.
     num_episodes = 15000 # How many episodes of game environment to train network with.
-    pre_train_steps = 5000 # How many steps of random actions before training begins.
-    pre_anneling_steps = 50000 # How many steps of training before decaying epsilon
+    pre_train_steps = 500#0 # How many steps of random actions before training begins.
+    pre_anneling_steps = 0#50000 # How many steps of training before decaying epsilon
     num_supervised_episodes = 0 # How many episodes to train on supervised actions.
     experience_buffer_size = 15000 # How many past steps are stored in the buffer at any one time.
-    h_size = 512 # The size of the final convolutional layer before splitting it into Advantage and Value streams.
+    h_size = 512 # The size of the final layer before splitting it into Advantage and Value streams.
     tau = 0.001 # Rate to update target network toward primary network
     num_actions = 6
     step_size = 15 # How many pixels to move in one action
@@ -473,9 +498,11 @@ def dd_dqn_main():
     load_model = False # Whether to load a saved model.
     checkpoint_path, evaluation_path, tboard_path = getOutputDirNames()
     plot_vision = False # Plot the agent's view of the environment
+    show_heatmap = True
     include_rgb = False # If true, use an RGB view as input. If false, convert to grayscale.
     include_prompt = False # If true, include yellow prompt in input.
     stochastic_policy = True # If true, Q-function defines a probability distribution
+    use_softmax = False # Whether to use softmax in deriving probability distribution form Q-values
     include_stay = False # Include STAY as an action
     include_horizontal_moves = True # Include LEFT and RIGHT as actions
     if not include_stay:
@@ -559,18 +586,20 @@ def dd_dqn_main():
             d = False
             rAll = 0
             step_num = 0
-            ep_num = getEpisodeNumber(info, ep_num + ep_num_offset) - ep_num_offset
+            current_ep_num = ep_num
+            #ep_num = getEpisodeNumber(info, ep_num + ep_num_offset) - ep_num_offset
             print '\n------ Episode', ep_num
             print (currentX, currentY)
 
-            while epNumIsConstant(info, ep_num, ep_num_offset):
+            while ep_num == current_ep_num:#epNumIsConstant(info, ep_num, ep_num_offset):
                 step_num += 1
                 # Sample an action given state s using mainQN and an epsilon-greedy policy
                 supervised_episode = ep_num < num_supervised_episodes
-                a_num = sampleAction(sess, raw_s, s, prevX, prevY, mainQN, num_actions, epsilon, step_num, total_steps, pre_train_steps, supervised_episode, stochastic_policy, include_prompt, cursor_height, cursor_width, step_size)
+                a_num, Q, V, A = sampleAction(sess, raw_s, s, prevX, prevY, mainQN, num_actions, epsilon, step_num, total_steps, pre_train_steps, \
+                    supervised_episode, stochastic_policy, use_softmax, include_prompt, cursor_height, cursor_width, step_size)
                 prevX, prevY = currentX, currentY
 
-                a, currentX, currentY = intToVNCAction(a_num, include_stay, prevX, prevY, step_size)
+                a, currentX, currentY = intToVNCAction(a_num, prevX, prevY, step_size)
                 raw_s1, r, d, info = env.step([a])
                 #if (not s1 is None) and len(s1) > 0 and len(s1[0]) > 1:
                 #    print s1[0]['text']
@@ -593,7 +622,7 @@ def dd_dqn_main():
                         #print 'Training step'
                         trainBatch = myBuffer.sample(batch_size) #Get a random batch of experiences.
                         #Below we perform the Double-DQN update to the target Q-values
-                        trainQNs(sess, mainQN, targetQN, stochastic_policy, trainBatch, batch_size, y)
+                        trainQNs(sess, mainQN, targetQN, stochastic_policy, use_softmax, trainBatch, batch_size, y)
                         updateTarget(sess, targetOps) #Set the target network to be equal to the primary network.
                 rAll += r[0]
                 
@@ -601,9 +630,8 @@ def dd_dqn_main():
                     print '.....', ep_num, r
                     total_steps += step_num
                     print 'Steps taken this episode:', step_num
-                    if r[0] == 0 or abs(r[0]) > 1:
-                        ep_num_offset += 1
-                    else:
+                    if r[0] != 0 and abs(r[0]) <= 1:
+                        ep_num += 1
                         rewards, successes, fails, misses = addReward(r[0], rewards, successes, fails, misses)
                         if save_history:
                             history_writer.saveEpisode(r[0])
@@ -617,6 +645,26 @@ def dd_dqn_main():
                             episode_summary.value.add(simple_value=float(successes)/len(rewards), tag="Success-%")
                             episode_summary.value.add(simple_value=float(fails)/len(rewards), tag="Fail-%")
                             episode_summary.value.add(simple_value=float(misses)/len(rewards), tag="Miss-%")
+                            if len(Q) > 0:
+                                #QT = tf.constant(Q)
+                                #VT = tf.constant(V)
+                                #AT = tf.constant(A)
+                                #print type(QT), type(VT), type(AT), QT, VT, AT
+                                #tf.Summary(value=[tf.Summary.Value(tag="auc", simple_value=auc)]))
+                                for i in range(len(Q)):
+                                    episode_summary.value.add(simple_value=Q[i], tag="Q-"+str(i))
+                                for i in range(len(V)):
+                                    episode_summary.value.add(simple_value=V[i], tag="V-"+str(i))
+                                for i in range(len(A)):
+                                    episode_summary.value.add(simple_value=A[i], tag="A-"+str(i))
+                                #q_summaries = tf.summary.merge([
+                                #tf.summary.histogram("Q", QT),#sess.run(mainQN.QOut, feed_dict={mainQN.imageIn:[s]})
+                                #tf.summary.histogram("V", VT),#sess.run(mainQN.Value, feed_dict={mainQN.imageIn:[s]}))
+                                #tf.summary.histogram("A", AT)])#sess.run(mainQN.Advantage, feed_dict={mainQN.imageIn:[s]}))
+                                #episode_summary.value.add(simple_value=Q, tag="Q")
+                                #episode_summary.value.add(simple_value=V, tag="V")
+                                #episode_summary.value.add(simple_value=A, tag="A")
+                                #summary_writer.add_summary(q_summaries, total_t)
                             summary_writer.add_summary(episode_summary, total_t)
                             summary_writer.flush()
                             total_t += 1
@@ -626,7 +674,7 @@ def dd_dqn_main():
                 if not save_history:
                     env.render()
                 if plot_vision:
-                    plotVision(s1, include_rgb)
+                    plotVision(s1, include_rgb, show_heatmap)
             
             #Get all experiences from this episode and discount their rewards.
             myBuffer.add(episodeBuffer.buffer)
