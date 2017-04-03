@@ -974,7 +974,9 @@ The Double Deep Q network has trained over 240,000 steps (2000+ episodes).
 At the end of the training process, the performance of our agents can not be considered to be perfect, which could potentially be due to insufficient training, as well as perhaps the inconvergence of reward, as the agent learning most of the feature at the end of stage with convergence of reward 
 
 \subsection{Difference caused by hyperparameters}
-A larger learning rate could speed up the learning process by increasing the loss in backpropagation of the CNN. As we mentioned earlier, the epsilon value decays over time from one to near-zero, but it is hard to identify a proper decay rate - a higher decay rate might not guarantee sufficient exploration of the agent, whereas a lower decay rate will postpone the stage in which the agent will see a dramatic rise in reward. 
+As described earlier, identifying sufficient hyper-paramters of an agent is crucial to progressive learning behavior. For example, within the neural network of any agent, a larger learning rate for the relevant optimization method could speed up the learning process by using backpropagation to optimize the loss function. However, it is hard to identify a proper decay rate - a higher decay rate might not guarantee sufficient exploration for an agent, whereas a lower decay rate will postpone the stage for an agent to see a dramatic rise in reward.\linebreak
+
+When we consider the varying aspects of the different environments within the benchmark (different time constraints, complexity of task and action spaces required, rewards etc.), different hyper-parameter values need to be taken into consideration to optimize the learning behavior of an agent. Unoptimized agents tend to show convergence of their predictions to a constant set of 0’s throughout the remainder of the training process. Such changes could vary from more generalized optimization parameters (the learning and decay rate) to more agent-specific parameters (target network update frequency and discount factor within Deep Q Networks).  
 
 \section{Limitations}
 
