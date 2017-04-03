@@ -833,12 +833,12 @@ Figure \ref{fig:inputprocessing} presents three screen-shots that showcase some 
 \subsection{Implemented models}
 One way to train agents on this environment is to use on-policy and off-policy methods. On-policy methods create a policy to make decisions that are improved over time using the agent's action-value function. In off-policy methods such as Q-learning, the agent is using a second greedy policy to determine the value of its actions, regardless of what the current policy recommends \cite{sutton1998reinforcement}. We chose to implement Policy Gradient algorithms (on-policy) as well as Double DQNs and Double Dueling DQNs (off-policy).
 \subsubsection{On-policy methods}  
-In this work, Vanilla Policy Gradient (PG) was chosen as the main on-policy approach due to its relative simplicity as well as flexibility in the selection of an action space.
-On top of that, a theoretical advantage of this approach is that the policy itself does not need to be parametrized, which means that any arbitrary policy can be represented \cite{Peters:2010}.
+In this work, a Vanilla Policy Gradient (PG) was chosen as the main on-policy approach due to its relative simplicity as well as flexibility in the selection of an action space.
+On top of that, a theoretical advantage of this approach is that the policy itself does not need to be parameterized, which means that any arbitrary policy can be represented \cite{Peters:2010}.
 
-It proved challenging to fit Vanilla PG into the MWoB environment without any supporting pre-processing. Hence, we added visual manipulation to the input state, such as cropping, converting RGB to greyscale, and corner detection. At first, we used a fully connected network as the policy approximator, but this resulted in the network having too many parameters and being more difficult to train \cite{LongSD14}. To resolve this, the network was replaced with a CNN which considers local neighbourhoods of pixels to shrink down the calculation time and space.
+It proved to be challenging to fit Vanilla PG into the MWoB environment without any supporting pre-processing. Hence, we added visual manipulation to the input state, such as cropping, converting RGB to greyscale, and corner detection. At first, we used a fully connected network as the policy approximator, but this resulted in the network having too many parameters and being more difficult to train \cite{LongSD14}. Although it is possible to use a fully connected network, it produces unnecessary high level details with the cost of longer training time and larger input. To overcome this problem, CNN offers a more efficient input processing system that takes neighbouring pixels to minimize the input and consequently minimize the calculation time and space. 
 
-We used TensorFlow to implement the CNN, expand the network with additional layers, train its weights, and process modify. To interface with the MWoB and Gym environments, TensorFlow played a crucial role in simplifying and shaping the agent's input and output. On top of that, TensorFlow came with the advantage of in-built TensorBoard logging to track the agent's performance throughout the training process.
+We used TensorFlow to implement the CNN, expand the network with additional layers, train its weights, and modify the input. To interface with the MWoB and Gym environments, TensorFlow played a crucial role in simplifying and shaping the agent's input and output. On top of that, TensorFlow came with the advantage of in-built TensorBoard logging to track the agent's performance throughout the training process, thus allowing us to more easily and actively monitor the progress of the agent.
 
 \subsubsection{Off-policy methods}  
 An agent following an off-policy approach inherits the behavior of following the recommendation actions off of a second \(\epsilon\)-greedy policy, rather than an action the actual policy \(\pi\) might recommend it to take. This might result an agent to take actions of large consequences, but slowly learns to converge to an optimal policy over time. In this project, we decided to primarily look into adaptations of the Deep Q-network.\linebreak
@@ -894,7 +894,7 @@ Agent & Reward & Success rate \% \\
 \hline
 Random agent & 0.1196 & 67.20\\
 \hline
-Dueling DQN & &\\
+Double DQN & 0.1278 & 64.52\\
 \hline
 Double Dueling DQN & 0.2437 & 78.47\\
 
@@ -916,7 +916,7 @@ Agent & Mean reward & Success rate (\%) \\
 \hline
 Random agent & 0.3375 & 79.88\\
 \hline
-Dueling DQN & &\\
+Double DQN & -0.0214 & 68.72\\
 \hline
 Double Dueling DQN & 0.4377 & 82.80 \\
 \hline
@@ -958,25 +958,34 @@ Policy Gradient & &\\
 
 \section{Analysis}
 %suggestions:
-The performance of the baseline random agent also served as an indication of the overall difficulty of the environments.
+The performance of the baseline random agent served as an indication of the overall difficulty of the environments.
 
 We also found that including supervised actions to start with did not significantly increase the long-term performance of the agent.
 
-\subsection{Difference caused by hyperparemeters}
-Larger learning rate can speed up the learning process by increasing the loss in backpropagation of CNN.As we mentioned ,epsilon is decayed over time from one to near-zero ,but it is hard to identify a proper decay rate:a higher decay rate might not guarantee sufficient exploration of agent,a lower decay rate will postpone the stage in which  the agent will see a dramatic rise in reward. 
-\subsection{Limitations}
+Due to the random nature of this baseline agent, it can perform better than our agents in average reward and success rate of tasks over a smaller set of episodes. However, this advantage will decay to zero after training over 1000 episodes.
 
-\subsubsection{Hardware capability}
+It can be seen from tables that Double Duelling DQN is significantly better than Double DQN in all three tasks.
+ 
+\subsection{Validity}
+Our agents can only learn the value of each action or policy from the data that is fed to them (the state of the environment). All of our agents (Double DQN, Double Duelling DQN and Policy Gradient) tend to move towards the centre of the white section and even the button to click after training of 10000 steps, which implies that our agents manage to convert their vision into the feature of their current coordinates and identify the border of the white section and therefore our models are valid.
+The Double Deep Q network has trained over 240,000 steps (2000+ episodes).
+
+\subsection{Accuracy}
+At the end of the training process, the performance of our agents can not be considered to be perfect, which could potentially be due to insufficient training, as well as perhaps the inconvergence of reward, as the agent learning most of the feature at the end of stage with convergence of reward 
+
+\subsection{Difference caused by hyperparameters}
+A larger learning rate could speed up the learning process by increasing the loss in backpropagation of the CNN. As we mentioned earlier, the epsilon value decays over time from one to near-zero, but it is hard to identify a proper decay rate - a higher decay rate might not guarantee sufficient exploration of the agent, whereas a lower decay rate will postpone the stage in which the agent will see a dramatic rise in reward. 
+
+\section{Limitations}
+
+\subsection{Hardware capability}
 Our models combine CNNs with reinforcement learning, providing a good generalisation of methodologies against the clicking tasks. However, it also requires a longer and more intensive training process to train the parameters in the model (the fully connected layers and convolution kernel of the CNN). We are currently training on a machine with only one GPU therefore the training process would hypothetically achieve higher efficiency if a machine (or even a cluster of machines) with multiple GPUs is used instead.
 
-\subsubsection{Lack of environment source code}
+\subsection{Lack of environment source code}
 Our agent learns under a model-free environment which means limited information access about the environments (only one reward value and image of the section where cursor can move). By taking advantage of source code of the benchmark provided by Dr. Andrej Karpathy later, the agent could be adapted to fully know and interpret certain aspects about the environment, such as what kind of html components there are and their positions/sizes or even the best policy in each step during training process, thus speeding up the training process by using reward manipulation. Also, with the help of a model-based environment, we could analyse the training process by recording and illustrating more criteria (not just the reward value). 
 
-\subsubsection{Runtime errors}
-Above this all, there are still some other factors which have affected our training identified within the Universe platform messages, such as the error "reward falling behind"/"throttler fell behind by X seconds" or frame loss.
-
-
-
+\subsection{Runtime errors}
+Above all, there are still some other factors which have affected our training identified within the Universe platform messages, such as the error "reward falling behind"/"throttler fell behind by X seconds" or frame loss.
 
 \section{Conclusion and future work}
 \subsection{Conclusion}
