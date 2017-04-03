@@ -962,6 +962,8 @@ The performance of the baseline random agent also served as an indication of the
 
 We also found that including supervised actions to start with did not significantly increase the long-term performance of the agent.
 
+\subsection{Difference caused by hyperparemeters}
+Larger learning rate can speed up the learning process by increasing the loss in backpropagation of CNN.As we mentioned ,epsilon is decayed over time from one to near-zero ,but it is hard to identify a proper decay rate:a higher decay rate might not guarantee sufficient exploration of agent,a lower decay rate will postpone the stage in which  the agent will see a dramatic rise in reward. 
 \subsection{Limitations}
 
 \subsubsection{Hardware capability}
