@@ -961,7 +961,15 @@ Policy Gradient & &\\
 The performance of the baseline random agent also served as an indication of the overall difficulty of the environments.
 
 We also found that including supervised actions to start with did not significantly increase the long-term performance of the agent.
+Due to the coincidence ,random agent can perform better than our agents in average reward and success rate of tasks.However,this advantage will decay to zero after training over 1000 episodes.
 
+It can be seen from tables that Double Dueling DQN is signifcantly better than Double DQN in all three tasks.
+ 
+\subsection{Validness}
+As deep reinforcement learning is based on  deep learning , our agents can only learning the value of each action or policy from  the  data we feed (refers to state in enviroment ).All of our agents (double DQN,Double Dueling DQN,Policy Gradient) tend to move toward the  centre of white section and even the button to click   after training of 10000 steps , which implys that our agents manage to convert their vision into the feature of their current coordinate and  figure out border of white section and  therefore our models are valid.
+The double deep q network has trained over 240000steps (2000+)episodes
+\subsection{perfectness}
+At the end of training process,the performance of our agent is not good as ideal ,it might simply because of insufficient training,and another reason might because of inconvergence of reward ,as the agent learning most of the feature at the end of stage with convergence of reward 
 \subsection{Difference caused by hyperparemeters}
 Larger learning rate can speed up the learning process by increasing the loss in backpropagation of CNN.As we mentioned ,epsilon is decayed over time from one to near-zero ,but it is hard to identify a proper decay rate:a higher decay rate might not guarantee sufficient exploration of agent,a lower decay rate will postpone the stage in which  the agent will see a dramatic rise in reward. 
 \subsection{Limitations}
