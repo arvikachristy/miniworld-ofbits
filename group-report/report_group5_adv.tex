@@ -844,23 +844,23 @@ We used TensorFlow to implement the CNN, expand the network with additional laye
 An agent following an off-policy approach inherits the behavior of following the recommendation actions off of a second \(\epsilon\)-greedy policy, rather than an action the actual policy \(\pi\) might recommend it to take. This might result an agent to take actions of large consequences, but slowly learns to converge to an optimal policy over time. In this project, we decided to primarily look into adaptations of the Deep Q-network.\linebreak
 
 \paragraph{\bf Deep Q-learning}
-Considering the approach we took models a discrete action space, Deep Q-networks were adaptable with this environment. The incorporation of a Convolutional Neural Network (CNN) allowed us to easily feed the pixel data (having been processed with techniques mentioned above) to the network and provide predictions for a fixed number of actions. As described earlier, mouse-based controls were generalized to 5 discrete actions (with also an additional 6th for an agent to do nothing).\linebreak
-
-We did, however, encounter some issues when experimenting with the Experience Replay technique and the hyper-parameters of the agent itself. The MWoB environments have a tendency to produce states with no pixel data at all (only a [None] state) if an episode were to complete when the time elapsed. This is known nature emitted by the environment to the Universe platform and we had to decide how to deal with storing tuples if such transition arises, and if omitting this transition entirely would affect the training process of the network. Another potential improvement we came across was implementing \textit{Prioritized Experience Replay} as explained above. However, calculating error-indices for tuples stored in the binary heap tree relies on positive-only rewards, which renders it infeasible for our environments, which include negative rewards.
-
-Considering that each episode within any MWoB environment includes a time limit and an adjustable frames per second variable, this added to the challenge of identifying optimal initial hyper-parameters of the network that would influence the training process (even to some extent, whether it would train at all). By default, our environment ran at 15 frames per second  -- which puts an upper limit on the frequency of the agent's actions. Within the scope of the 'Click-Test' environment, the worst-case for the number of steps per episode is 150 steps (due to the time constraint set to 10 seconds). This meant that episodes can finish rapidly, and it followed that the target network had to be updated rather quickly in order to avoid the convergence of predicted-values to 0, and a much smaller replay memory size was required for the Experience Replay process.\linebreak
+Considering the approach we took models a discrete action space, Deep Q-networks were adaptable with this environment. The incorporation of a Convolutional Neural Network (CNN) allowed us to easily feed the pixel data (having been processed with techniques mentioned above) to the network and provide predictions for a fixed number of actions. As described earlier, mouse-based controls were generalized to 5 discrete actions (with also an additional 6th for an agent to do nothing). Figure \ref{fig:dueling} shows how this was reflected in our implementations of the DQN and Dueling DQN architectures.
 
 \begin{figure}[h]
 \centering
 	\includegraphics[width=\columnwidth, keepaspectratio]{dueling.png}
-	\caption{Illustration comparing the difference between a regular DQN and a Dueling DQN within the neural network}
+	\caption{Illustration comparing the difference between our regular DQN and our Dueling DQN within the neural network}
 	\label{fig:dueling}
 \end{figure}
 
-\subsection{Reward manipulation}
-Another approach we looked into are additional reward manipulation techniques to supplement the existing reward signals in the hope of improving the efficiency of the training process. One caveat to these environments is that during the learning process, there is a possibility for the sequence of actions to result in the cursor moving outside the canvas area onto irrelevant parts of the environment. While we can simply add boundary checking to prevent this behavior from happening, the agent would not directly learn from this restriction due to a lack of error signal of any sort. To counteract this, if the cursor is located at an edge and performs an action that would result in the cursor moving outside the canvas, we experimented with sending out a negative reward signal of -0.5. \linebreak
+We did, however, encounter some issues when experimenting with the Experience Replay technique and the hyper-parameters of the agent itself. The MWoB environments have a tendency to produce states with no pixel data at all (only a [None] state) if an episode were to complete when the time elapsed. This is known nature emitted by the environment to the Universe platform and we had to decide how to deal with storing tuples if such transition arises, and if omitting this transition entirely would affect the training process of the network. Another potential improvement we came across was implementing \textit{Prioritized Experience Replay} as explained above. However, calculating error-indices for tuples stored in the binary heap tree relies on positive-only rewards, which renders it infeasible for our environments, which include negative rewards.
 
-Inversely, we also tried providing positive reward signals if the cursor performed progressive steps towards completion of the task. For example, one of the environments involved clicking a randomly generated button within the canvas. One technique involved keeping record of the current position of the generated button, and set up a proximity area around the button. If the agent were to perform an action that would result in the position of the cursor to move closer towards the button, it would receive a positive reward signal of +0.1 for every step it did so. \linebreak
+Considering that each episode within any MWoB environment includes a time limit and an adjustable frames per second variable, this added to the challenge of identifying optimal initial hyper-parameters of the network that would influence the training process (even to some extent, whether it would train at all). By default, our environment ran at 15 frames per second  -- which puts an upper limit on the frequency of the agent's actions. Within the scope of the 'Click-Test' environment, the worst-case for the number of steps per episode is 150 steps (due to the time constraint set to 10 seconds). This meant that episodes can finish rapidly, and it followed that the target network had to be updated rather quickly in order to avoid the convergence of predicted-values to 0, and a much smaller replay memory size was required for the Experience Replay process.
+
+\subsection{Reward manipulation}
+Another approach we looked into are additional reward manipulation techniques to supplement the existing reward signals in the hope of improving the efficiency of the training process. One caveat to these environments is that during the learning process, there is a possibility for the sequence of actions to result in the cursor moving outside the canvas area onto irrelevant parts of the environment. While we can simply add boundary checking to prevent this behavior from happening, the agent would not directly learn from this restriction due to a lack of error signal of any sort. To counteract this, if the cursor is located at an edge and performs an action that would result in the cursor moving outside the canvas, we experimented with sending out a negative reward signal of -0.5. \\
+
+Inversely, we also tried providing positive reward signals if the cursor performed progressive steps towards completion of the task. For example, one of the environments involved clicking a randomly generated button within the canvas. One technique involved keeping record of the current position of the generated button, and set up a proximity area around the button. If the agent were to perform an action that would result in the position of the cursor to move closer towards the button, it would receive a positive reward signal of +0.1 for every step it did so.
 
 \subsection{Supervised methods}
 Inspired by Inverse Reinforcement Learning \cite{abbeel2004apprenticeship}, we also investigated approaches to imitation learning. By observing supervised optimal actions, the agent learns the reward function of the environment before learning the optimal policy to optimize for this reward function. While our method of sampling ideal actions was not necessarily scalable to other environments, it gave us evidence on whether the amount of positive episodes was a limiting factor in agent learning performance.
@@ -871,12 +871,18 @@ To convey a complete picture of learning performance, we ran each agent through 
 \subsection{Training Setup}
 The training procedure for these agents was primarily run on a server comprised of an Nvidia TITAN X GPU. We compiled and installed the TensorFlow library from source to take advantage of additional CPU instructions (SSE4.2, AVX2 and FMA), as well as additional GPU capabilities, such as the Nvidia CUDA platform. These optimizations were to ensure we were reaching as much benefit of performance enhancements as possible for added efficiency to training. The results of all our agents were logged and visualized using the in-built TensorBoard to analyze performance of the agents.
 
-
 \section{Results}
 
-To evaluate our models, we trained them for 3000 episodes on each of the three environments introduced in section 3.1. A typical learning process is depicted in Figure \ref{fig:tboard}. In 3000 episodes, the mean reward rises from around 0 to around 0.4. A large part of the fluctuations in the training process can be attributed to the inherent randomness of the environment, such as the distance from the cursor to the generated button, and the size of said button.  
+To evaluate our models, we trained them for 3000 episodes on each of the three environments introduced in section 3.1. A typical learning process is depicted in Figure \ref{fig:tboard}. As epsilon decreases and the policy of the agent gradually turns from a random policy to a greedy, informed policy, an upward trend can be seen in the mean reward. A large part of the fluctuations in the training process can be attributed to the inherent randomness of the environment, such as the distance from the cursor to the generated button, and the size of said button.
 
-For comparison, we included an agent which samples each action uniformly at random. For our agents to add value, they would need to outperform said random agent. Tables \ref{results-clicktest}, \ref{results-focustext} and \ref{results-closedialog} demonstrate a performance improvement of up to 10 percent units in the percentage of successful episodes and a mean reward approximately 0.10 higher than the baseline.
+\begin{figure}[h!]
+\centering
+	\includegraphics[width=\columnwidth, keepaspectratio]{learningcurve.png}
+	\caption{A typical learning curve of our Double Dueling DQN agent on the ClickTest-v0 environment, plotted as reward per episode and smoothed for clarity. In 3000 episodes, the mean reward rises from around 0 to around 0.4.}
+	\label{fig:tboard}
+\end{figure}
+
+For comparison, we included an agent which samples each action uniformly at random. For our agents to add value, they would need to outperform said random agent. Tables \ref{results-clicktest}, \ref{results-focustext} and \ref{results-closedialog} demonstrate a performance improvement of up to several percent units in the percentage of successful episodes for the Double Dueling DQN and a mean reward approximately 0.10 higher than the baseline. The Double DQN and Policy Gradient methods also surpass the random agent in mean reward on some environments. Although the exact metrics are subject to variation between individual runs, the effect is mostly counterbalanced by averaging both figures over the last 1000 episodes.
 
 \begin{table}[!h]
 %% increase table row spacing, adjust to taste
@@ -890,7 +896,7 @@ For comparison, we included an agent which samples each action uniformly at rand
 %% than the plain LaTeX2e tabular which is used here.
 \begin{tabular}{|c||c|c|}
 \hline
-Agent & Reward & Success rate \% \\
+Agent & Mean reward & Success rate \% \\
 \hline
 Random agent & 0.1196 & 67.20\\
 \hline
@@ -905,7 +911,6 @@ Policy Gradient & 0.1511 & 65.30\\
 \end{table}
 
 \begin{table}[!h]
-%% increase table row spacing, adjust to taste
 \renewcommand{\arraystretch}{1.3}
 \caption{Results on FocusText-v0}
 \label{results-focustext}
@@ -933,47 +938,40 @@ Policy Gradient &  0.2165 & 70.55\\
 \centering
 \begin{tabular}{|c||c|c|}
 \hline
-Agent & Mean Reward & Success rate (\%) \\
+Agent & Mean reward & Success rate (\%) \\
 \hline
 Random agent & -0.6676 & 21.74 \\
 \hline
 Dueling DQN & &\\
 \hline
-Double Dueling DQN & &\\
+Double Dueling DQN & -0.0821 & 58.42\\
 \hline
 Policy Gradient & &\\
 \hline
 \end{tabular}
 \end{table}
 
-\begin{figure}[h!]
-\centering
-	\includegraphics[width=\columnwidth, keepaspectratio]{learningcurve.png}
-	\caption{A typical learning curve of our DQN agent on the ClickTest-v0 environment, plotted as reward per episode and smoothed for clarity.}
-	\label{fig:tboard}
-\end{figure}
-
 
 
 
 \section{Analysis}
 %suggestions:
-The performance of the baseline random agent served as an indication of the overall difficulty of the environments.
+Our results show that the Double Duelling DQN performs significantly better than Double DQN and Policy Gradient in the three tasks included. The additional dueling capabilities allowed it to overcome the problem of Q-values converging to zero over time. In addition, methods such as input dimensionality reduction, a combination of convolutional and fully connected layers and an appropriate rate of training boosted its learning performance. On the other hand, we found that including supervised actions to start with did not significantly increase the long-term performance our agents. \\
 
-We also found that including supervised actions to start with did not significantly increase the long-term performance of the agent.
+When comparing results across the three tasks investigated, it is apparent that some of them were harder than others to solve. The performance of the baseline random agent served as an indication of the overall difficulty of each environment. Out of the tasks we considered, CloseDialog was the most difficult, as its target region was significantly smaller and less visually conspicuous than that of other environments. What boosted the performance of both random and learning agents on the FocusText environment was the omission of horizontal actions, which allowed the agents to only focus on vertical and click actions. 
 
-Due to the random nature of this baseline agent, it can perform better than our agents in average reward and success rate of tasks over a smaller set of episodes. However, this advantage will decay to zero after training over 1000 episodes.
+Although our results still have room for improvement, it is worth noting that due to a delay in reaction time, not even a human could achieve a perfect 1.0 mean reward on these environments.
 
-It can be seen from tables that Double Duelling DQN is significantly better than Double DQN in all three tasks.
+
  
 \subsection{Validity}
-Our agents can only learn the value of each action or policy from the data that is fed to them (the state of the environment). All of our agents (Double DQN, Double Duelling DQN and Policy Gradient) tend to move towards the centre of the white section and even the button to click after training of 10000 steps, which implies that our agents manage to convert their vision into the feature of their current coordinates and identify the border of the white section and therefore our models are valid.
+Our agents can only learn the value of each action or policy from the data that is fed to them (the state of the environment). All of our agents (Double DQN, Double Duelling DQN and Policy Gradient) tend to move towards the centre of the white section and even the button to click after training of 10000 steps, which implies that our agents manage to convert their vision into the features of their current coordinates and identify the border of the white section and therefore our models are valid.
 The Double Deep Q network has trained over 240,000 steps (2000+ episodes).
 
 \subsection{Accuracy}
 At the end of the training process, the performance of our agents can not be considered to be perfect, which could potentially be due to insufficient training, as well as perhaps the inconvergence of reward, as the agent learning most of the feature at the end of stage with convergence of reward 
 
-\subsection{Difference caused by hyperparameters}
+\subsection{The effect of hyperparameters}
 A larger learning rate could speed up the learning process by increasing the loss in backpropagation of the CNN. As we mentioned earlier, the epsilon value decays over time from one to near-zero, but it is hard to identify a proper decay rate - a higher decay rate might not guarantee sufficient exploration of the agent, whereas a lower decay rate will postpone the stage in which the agent will see a dramatic rise in reward. 
 
 \section{Limitations}
@@ -984,8 +982,8 @@ Our models combine CNNs with reinforcement learning, providing a good generalisa
 \subsection{Lack of environment source code}
 Our agent learns under a model-free environment which means limited information access about the environments (only one reward value and image of the section where cursor can move). By taking advantage of source code of the benchmark provided by Dr. Andrej Karpathy later, the agent could be adapted to fully know and interpret certain aspects about the environment, such as what kind of html components there are and their positions/sizes or even the best policy in each step during training process, thus speeding up the training process by using reward manipulation. Also, with the help of a model-based environment, we could analyse the training process by recording and illustrating more criteria (not just the reward value). 
 
-\subsection{Runtime errors}
-Above all, there are still some other factors which have affected our training identified within the Universe platform messages, such as the error "reward falling behind"/"throttler fell behind by X seconds" or frame loss.
+%\subsection{Runtime errors}
+%Above all, there are still some other factors which have affected our training identified within the Universe platform messages, such as the error "reward falling behind"/"throttler fell behind by X seconds" or frame loss.
 
 \section{Conclusion and future work}
 \subsection{Conclusion}
