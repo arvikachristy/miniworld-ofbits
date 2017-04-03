@@ -734,7 +734,11 @@ During training, rewards received from the environment are used to adjust the po
 %\\In this research, the vanilla Policy Gradient was chosen as the main on-policy approach. To get a basic vanilla Policy Gradient to work, we had to do some visual manipulation to the state and use discrete action spaces with a Convolutional Neural Network (CNN) as the policy. At first, we tried to use a fully connected network as the policy, however the network has too many parameters and is more difficult to train whereas CNN considers neighbouring pixels to shrink down the calculation time and space.
 
 \subsection{Q-learning}
-Another notable variant of model-free RL is Q-learning\cite{watkins1989learning}, which approximates an action-value function $Q(S, A)$, representing how much value the agent predicts it will receive in the long run from taking action $A$ in state $S$. For a time step $t$, $Q$ is defined\cite{qlearning} as \[Q(S_t, A_t) = R_t + \gamma Q(S_{t+1}, A_{t+1})\] where $R_t$ is the reward received after taking action $A; S_{t+1}$ the state transitioned to; and $\gamma$ the discount factor [0, 1], which determines the importance of future rewards relative to current ones.  A \(\gamma\) of 0 causes future rewards beyond the current time step to be neglected, whereas a \(\gamma\) of 1 gives a distant future reward equal weight as a reward in the near future. An action is selected by calculating the maximum Q-value of the action space in the current state. In order to eventually converge at an optimal policy, the Q-function is updated by minimising TD error at each time step $t$:
+Another notable variant of model-free RL is Q-learning\cite{watkins1989learning}, which approximates an action-value function $Q(S, A)$, representing how much value the agent predicts it will receive in the long run from taking action $A$ in state $S$. For a time step $t$, $Q$ is defined\cite{qlearning} as:
+\begin{equation}
+Q(S_t, A_t) = R_t + \gamma Q(S_{t+1}, A_{t+1})
+\end{equation}
+where $R_t$ is the reward received after taking action $A; S_{t+1}$ the state transitioned to; and $\gamma$ the discount factor [0, 1], which determines the importance of future rewards relative to current ones.  A \(\gamma\) of 0 causes future rewards beyond the current time step to be neglected, whereas a \(\gamma\) of 1 gives a distant future reward equal weight as a reward in the near future. An action is selected by calculating the maximum Q-value of the action space in the current state. In order to eventually converge at an optimal policy, the Q-function is updated by minimising TD error at each time step $t$:
 \begin{align*}
 Q\left( \mbox{S}_{t},\; A_{t} \right)\; &\leftarrow\;Q\left( \mbox{S}_{t},\; A_{t} \right)\;\\ 
 &+\; \alpha_{t}\left[ R_{t+1}\; +\; \gamma \max _{a}Q\left( \mbox{S}_{t+1},\; A \right)\; -\; Q\left( \mbox{S}_{t},\; A_{t} \right) \right]
@@ -759,14 +763,14 @@ The main Q-network is implemented as a Convolutional Neural Network (CNN). This 
 
 \item \textbf{Target Network} :
 Mnih et al. make use of a secondary neural network that is, for the most part, a duplicate of the Q-Network mentioned above, but with its parameters \(\theta\) copied over with a delay of $n$ steps. The Q-values produced from this network are used to compute the TD loss function. In this way, the delay in updating the target values adds stability to the learning process. For a target network with parameters \(\theta ^{-}\) and a Q-network with parameters \(\theta\), the target value is defined in \cite{deepqlearning} as follows :
-\begin{align*}
+\begin{equation}
 T_{DQN}\; = ( R\; +\; \lambda \max _{a}Q\left( \mbox{S}_{t+1},\; A_{t+1},\; \theta ^{-} \right)
-\end{align*}
+\end{equation}
 
 With the loss function defined as follows:
-\begin{align*}
+\begin{equation}
 L\left( \theta  \right)\; =\; \mbox{E}_{\mbox{S},A,\mbox{S}_{t+1},R,D}\; \cdot \; \left[ \left(T_{DQN}\; -\; Q\left( \mbox{S},\; A,\; \theta  \right) \right)^{2}\right]
-\end{align*}
+\end{equation}
 
 \item \textbf{Experience Replay} : Before the training process, the agent's experiences at each time step $t$ are stored in the form of a tuple represented as (\({{S}}_{{t}}\), \({{A}}_{{t}}\), \({{R}}_{{t+1}}\), \({{S}}_{{t+1}}\), \(d\)), with \(d\) a boolean variable signifying if the step completes the episode. These tuples are stored in a replay memory \(D\) with a certain initial capacity. At every training step, the agent samples a batch of tuples from \(D\) that is fed into the network to update the Q-function. This process was later improved upon with the introduction of \textit{Prioritized Experience Replay}\cite{per}, which makes an addition of error-indices to each tuple, representing how much this experience differs from the predictions of the policy, and stores the tuples in a binary heap tree instead of a linear buffer.
 \end{itemize}
@@ -778,9 +782,9 @@ Building on the DQN architecture, the Dueling DQN approach \cite{wang2015dueling
 
 \subsubsection{Double Deep Q-learning}
 The DQN uses a max operator to select and evaluate actions upon a given state with the target network. The problem with this approach is that this can lead to selection of overestimated values, which can delay the time in learning the optimal policy. A simple improvement to this, referred to as the Double Deep Q-Network \cite{doubledeepqlearning}, uses a different equation to update the target value :
-\begin{align*}
+\begin{equation}
 T_{DDQN}\; =\; R\; +\; \lambda Q\left( \mbox{S}_{t+1},\; \mbox{argmax}Q\left( \mbox{S}_{t+1},\; a,\; \theta ^{-} \right),\; \theta ^{-} \right)
-\end{align*}
+\end{equation}
 \subsection{Imitation learning}
 In scenarios with large action spaces and complicated tasks, exploring the entire action space uniformly at random can be intractable. In such a case, training can more efficiently begin based on a set of supervised, ideal actions. In Inverse Reinforcement Learning, the agent learns the reward function of the environment by observing these optimal actions performed by an expert, rather than learning a policy or a value function through its own actions. Using this learning method, Abbeel and Ng were able to retrieve a policy with comparable performance to that of the original expert \cite{abbeel2004apprenticeship}.
 \section{Methodology}
@@ -965,7 +969,7 @@ Potential factors limiting our observed learning performance could be insufficie
 \subsection{The effect of hyperparameters}
 As described earlier, identifying optimal hyperparamaters of an agent is crucial to progressive learning. For example, within the neural network of an agent, a larger learning rate for the relevant optimization method could speed up the learning process. However, it is hard to identify a proper decay rate -- a higher decay rate might not guarantee sufficient exploration for an agent, whereas a lower decay rate will postpone the stage for an agent to see a dramatic rise in reward.
 
-When we consider the varying aspects of the different environments within the benchmark (different time constraints, complexity of task and action spaces required, rewards etc.), different hyperparameter values need to be taken into consideration to optimize the learning behavior of an agent. Unoptimized agents tend to show convergence of their predictions to a constant set of 0'€™s throughout the remainder of the training process. Such changes could vary from more generalized optimization parameters (the learning and decay rate) to more agent-specific parameters (target network update frequency and discount factor within Deep Q-networks). 
+When we consider the varying aspects of the different environments within the benchmark (different time constraints, complexity of task and action spaces required, rewards etc.), different hyperparameter values need to be taken into consideration to optimize the learning behavior of an agent. Unoptimized agents tend to show convergence of their predictions to a constant set of 0'ï¿½ï¿½s throughout the remainder of the training process. Such changes could vary from more generalized optimization parameters (the learning and decay rate) to more agent-specific parameters (target network update frequency and discount factor within Deep Q-networks). 
  
 \section{Limitations}
 
@@ -975,7 +979,7 @@ Our models combine CNNs with reinforcement learning, providing a good generalisa
 \subsection{Lack of environment source code}
 Our agents learn under a model-free environment which means limited information access about the environments (only one reward value and image of the section where cursor can move). In the future, by taking advantage of the benchmark source code, the agent could fully understand and interpret certain aspects about the environment, such as what kind of HTML components they are, their positions/sizes and even the best policy in each step during training process, thus speeding up the training process by using reward manipulation. Furthermore, by using a model-based learning algorithm, we could analyse the training process by recording and illustrating more criteria (not just the reward value). 
 
-In addition, working with the MWoB ecosystem involved a number technical limitations that might have affected our training. This included a lack of synchronisation between the reward signals and the environment state. Had the MWoB environment been more stable, our agents'™ performance may have been more accurate than we observed.
+In addition, working with the MWoB ecosystem involved a number technical limitations that might have affected our training. This included a lack of synchronisation between the reward signals and the environment state. Had the MWoB environment been more stable, our agents'ï¿½ performance may have been more accurate than we observed.
 
 \section{Conclusion and Future work}
 \subsection{Conclusion}
