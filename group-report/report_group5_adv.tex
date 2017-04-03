@@ -692,7 +692,7 @@ Reinforcement learning%, action spaces, policy gradient, DQN, DDPG?
 % 
 % Here we have the typical use of a "T" for an initial drop letter
 % and "HIS" in caps to complete the first word.
-\IEEEPARstart{O}{ver} the past few years, there has been a monumental shift in technology and how it's being applied to everyday life, of which deep reinforcement learning (RL) is a field which has recently shown potential due to the technology available. With traditional algorithms, computers are explicitly told how to solve a problem, but with deep learning, they are able to teach themselves how to deal with these problems. At its simplest, the goal in RL is to determine an optimal way for an agent to act in an environment to achieve maximal reward. Significant progress has already been demonstrated in experiments on the Universe platform, where agents have been trained using deep reinforcement learning to successfully play Atari games \cite{mnih2013playing}. We have looked into extending the implementation of deep reinforcement learning methods into browser-based tasks. This introduction will give the reader an insight into the concerned technologies as well as derive a hypothesis for the experiments to follow.
+\IEEEPARstart{O}{ver} the past few years, there has been a monumental shift in technology and how it's been applied to everyday life, of which deep reinforcement learning (RL) is a field which has recently shown potential due to the technology available. With traditional algorithms, computers are explicitly told how to solve a problem, but with deep learning, they are able to teach themselves how to deal with these problems. At its simplest, the goal in RL is to determine an optimal way for an agent to act in an environment to achieve maximal reward. Significant progress has already been demonstrated in experiments on the Universe platform, where agents have been trained using deep reinforcement learning to successfully play Atari games \cite{mnih2013playing}. We have looked into extending the implementation of deep reinforcement learning methods into browser-based tasks. This introduction will give the reader an insight into the concerned technologies as well as derive a hypothesis for the experiments to follow.
 
 \subsection{OpenAI Universe}
 Universe is a software platform developed by OpenAI for training intelligent agents and measuring their performance across a wide range of games and websites. On this platform, any program can be turned into a Gym environment, a toolkit for developing and comparing reinforcement learning algorithms. Gym provides agents access to programs via a VNC client on a remote desktop running inside a Docker container. This allows the agent to perceive and act on the program the same way a human does by interpreting the pixel values of a screen and producing a combination of keyboard and/or mouse actions in response.
@@ -986,9 +986,14 @@ Our agents learn under a model-free environment which means limited information 
 
 Above all, there are still some other factors that might have affected our training. This includes incapability to detect the synchronisation between the reward value and the environment. Had the MWoB environment been more stable, the agent’s performance may have been more accurate than we expected.
 
-\section{Conclusion and future work}
+\section{Conclusion and Future work}
 \subsection{Conclusion}
-Following from the analysis of our results, we can conclude that...
+Following from the analysis of our results, we believe that we have made progress striving towards the ultimate goal of the benchmark which is to eventually train the agents such that they can complete the environments within MWoB to a human-level, or exceeding human-level, standard. 
+
+We believe that our choice of methods and processing was justified as input processing, action space reduction and choosing the appropriate model helped significantly towards the progress of our project.
+
+Given from our results, it strongly suggests that with further future training/improvement with the existing models, the agents will be able to accurately simulate clicking tasks which could lead on to more exciting opportunities. 
+ 
 \subsection{Future work}
 The novelty of the benchmark indicates still a wide area of progress that can be made, as such there are many future possibilities to expand upon the current state of our project:
 \subsubsection{Continuous action spaces}
