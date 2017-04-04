@@ -11,8 +11,8 @@ import plotly.graph_objs as go
 import sys, os
 from skimage.feature import corner_harris, corner_subpix, corner_peaks, peak_local_max
 
-env = gym.make('wob.mini.ClickTest-v0')
-env.configure(remotes=1, fps=10,
+env = gym.make('wob.mini.FocusText-v0')
+env.configure(remotes=1, fps=15,
               vnc_driver='go', 
               vnc_kwargs={'encoding': 'tight', 'compress_level': 0, 
                           'fine_quality_level': 100, 'subsample_level': 0})
@@ -22,6 +22,9 @@ def discount_rewards(r):
     """ take 1D float array of rewards and compute discounted reward """
     discounted_r = np.zeros_like(r)
     running_add = 0
+    set_reward = r[r.size-1]
+    if abs(set_reward[0]) < 0.00001:
+        set_reward[0]=-1    
     for t in reversed(xrange(0, r.size)):
         #print "discount", r, "ddfg", r[t]
         get_reward = r[t]
@@ -77,29 +80,29 @@ def validObserv(s):
     return s is not None and len(s) > 0 and s[0] is not None and type(s[0]) == dict and 'vision' in s[0]
 
 def doAction(a, x, y):
-    small_step = 20
+    small_step = 18
     minY = 125
     maxY = 285
-    minX = 10  
+    minX = 10
     maxX = 170
     if a == 0:
         return [universe.spaces.PointerEvent(x, y, 0),
             universe.spaces.PointerEvent(x, y, 1),
             universe.spaces.PointerEvent(x, y, 0)], x, y
-    elif a == 1:
-        return [universe.spaces.PointerEvent(x, y, 0)], x, y
+    elif a == 3:
+        return [universe.spaces.PointerEvent(x, y, 0),
+            universe.spaces.PointerEvent(x, y, 1),
+            universe.spaces.PointerEvent(x, y, 0)], x, y
     elif a == 2:
+        return [universe.spaces.PointerEvent(x, y, 0),
+            universe.spaces.PointerEvent(x, y, 1),
+            universe.spaces.PointerEvent(x, y, 0)], x, y            
+    elif a == 4:
         if y + small_step <= maxY:
             return [universe.spaces.PointerEvent(x, y + small_step, 0)], x, y + small_step
-    elif a == 3:
-        if x + small_step <= maxX:
-            return [universe.spaces.PointerEvent(x + small_step, y, 0)], x + small_step, y
-    elif a == 4:
+    elif a == 1:
         if y - small_step >= minY:
             return [universe.spaces.PointerEvent(x, y - small_step, 0)], x, y - small_step
-    elif a == 5:
-        if x - small_step >= minX:
-            return [universe.spaces.PointerEvent(x - small_step, y, 0)], x - small_step, y
     return [], x, y
 
 def rgb2gray(rgb):
@@ -108,11 +111,12 @@ def rgb2gray(rgb):
     return gray    
 
 def manipulateState(s, coordX,coordY):
-    if s is not None and s[0] is not None:
+    if s is not None and len(s) > 0 and s[0] is not None:
         if type(s[0]) == dict and 'vision' in s[0]:
             vi = s[0]['vision']
-            crop = vi[75:75+210, 10:10+160, :]
-            square = vi[75+50:75+50+160, 10:10+160, :] 
+            print "does it even go here?", vi
+            mid = vi[75:75+210, 10:10+160, :]
+            square = mid[75+50:75+50+160, 10:10+160, :] 
             # divide by 5
             # lowres = scipy.misc.imresize(crop, (42, 32, 3))
             # lowresT = tf.pack(lowres)
@@ -120,7 +124,7 @@ def manipulateState(s, coordX,coordY):
             #making it from RGB to grayscale
             grey = rgb2gray(square)
             coords = corner_peaks(corner_harris(grey), num_peaks=20, min_distance=5)
-            print coords, "SUBPIX SIZE"
+            # print coords, "SUBPIX SIZE"
             coords_subpix = corner_subpix(grey, coords)
 
             # if math.isnan(goal_y) or math.isnan(goal_x):
@@ -141,10 +145,11 @@ def manipulateState(s, coordX,coordY):
     return np.zeros(shape=[1,84*32])
 
 
-myAgent = agent(lr=1e-2,s_size=84*32,a_size=6,h_size=8) #Load the agent.
+myAgent = agent(lr=1e-2,s_size=84*32,a_size=5,h_size=8) #Load the agent.
 #s_sze is expecting one input coz its a flat vector (array), sp
-total_episodes = 100#Set total number of episodes to train agent on.
+total_episodes = 1000#Set total number of episodes to train agent on.
 update_frequency = 1
+success_rate = 0
 tboard_summaries = True
 tboard_path = getOutputGraph()
 
@@ -166,21 +171,24 @@ with tf.Session() as sess:
     print_cur_reward = []
     print_tot_reward = []
     cur_episode = 0
-    coordX = 80+10 
-    coordY = 80+75+50
     
     #starting cursor in the middle of the frame
 
-    s1,r,d,_ = env.step([[universe.spaces.PointerEvent(coordX, coordY)]])
     # while not validObserv(s):
     #     s1,r,d,_ = env.step([[universe.spaces.PointerEvent(coordX, coordY)]])
-        
+    coordX = np.random.randint(0, 80)+10
+    coordY = np.random.randint(0, 80)+125
     gradBuffer = sess.run(tf.trainable_variables())
     for ix,grad in enumerate(gradBuffer):
         gradBuffer[ix] = grad * 0
 
     end_rewards =0
     while i < total_episodes:
+        # coordX=0
+        # coordY=0
+        coordX = np.random.randint(0, 80)+10
+        coordY = np.random.randint(0, 80)+125
+        s1,r,d,_ = env.step([[universe.spaces.PointerEvent(coordX, coordY)]])
         s = env.reset()
         cur_episode +=1
         running_reward = 0
@@ -190,7 +198,7 @@ with tf.Session() as sess:
         ep_history = []
         
         #loop through each clicks
-        while d != True: 
+        while d != True:
             completed_click+=1
             s = manipulateState(s, coordX, coordY)
             print "new state", s
@@ -199,7 +207,6 @@ with tf.Session() as sess:
             #     s1,r,d,_ = env.step([[universe.spaces.PointerEvent(coordX, coordY)]])            
             #Choose either a random action or one from our network.
 
-
             a_dist = sess.run(myAgent.output,feed_dict={myAgent.state_in:np.array(s)})
             bug1 = sess.run(myAgent.state_in,feed_dict={myAgent.state_in:np.array(s)})
             bug = sess.run(myAgent.output,feed_dict={myAgent.state_in:np.array(s)})
@@ -207,19 +214,20 @@ with tf.Session() as sess:
 
             print "ADDED NOW MY AGENT bug" , bug1
             print "ADDED NOW MY AGENT TWO" , bug
-            a_dist = a_dist +1  
+            # a_dist = a_dist +1  
             # print myAgent.output.eval(), "CHOSEN Aoutput"
             print myAgent.chosen_action, "CHOSEN ACTio"
             print "adist!0" ,a_dist
-            a_dist = 0.75 * (a_dist + np.ones((1, 6)) / 6) #average uniform probability
+            a_dist = 0.75 * (a_dist + np.ones((1, 5)) / 5) #average uniform probability
             print "adist!1" ,a_dist
             a_dist /= a_dist.sum()
             print "adist!2" ,a_dist
             #pick from 0-6 choices and get the probability
-            a = np.random.choice(np.arange(0,6),p=a_dist[0])
+            a = np.random.choice(np.arange(0,5),p=a_dist[0])
             
             #a = np.argmax(a_dist == a) #takes the highest value from the array, but why a_dist==a?
             actionset= doAction(a, coordX, coordY)
+            
             print "GDJHSGD", actionset
             s1,r,d,_ = env.step([actionset[0]]) #Get our reward for taking an action given a bandit.
             #print "GDJHSGD", actionset
@@ -228,9 +236,6 @@ with tf.Session() as sess:
             print "Chosen action:", a, "and HEREEE", r[0]
             ep_history.append([s,a,r,s1])
             s = s1
-            
-            running_reward += r[0]
-            print "Total Cumulative Reward now:", running_reward, "R is here",r
 
             print "gfhgj", len(r)
             if d[0] == True:
@@ -254,19 +259,28 @@ with tf.Session() as sess:
                     for ix,grad in enumerate(gradBuffer):
                         gradBuffer[ix] = grad * 0
 
+                if(r[0]>0):
+                    success_rate += 1
+
+                print "Success rate now!: ", success_rate
+
                 if tboard_summaries:
                     episode_summary = tf.Summary()
                     episode_summary.value.add(simple_value=r[0], tag="Reward")
+                    episode_summary.value.add(simple_value=success_rate, tag="Success Rate")
                     summary_writer.add_summary(episode_summary, total_t)
                     summary_writer.flush()
                     total_t+=1                        
-
+                running_reward += r[0]
+                print "Total Cumulative Reward now:", running_reward, "R is here",r
                 total_reward.append(running_reward)
                 # total_lenght.append(j)
                 d=True
                 break
             env.render()
         end_rewards=running_reward/completed_click
+        cumulative_r = float(end_rewards/total_episodes)
+        print "current CUMULATIVE", cumulative_r
         d=False
         # print (running_reward/float(10)), "heyo", completed_click
         # print_tot_reward.append(running_reward/float(10))
