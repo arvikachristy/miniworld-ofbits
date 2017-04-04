@@ -114,7 +114,6 @@ def manipulateState(s, coordX,coordY):
     if s is not None and len(s) > 0 and s[0] is not None:
         if type(s[0]) == dict and 'vision' in s[0]:
             vi = s[0]['vision']
-            print "does it even go here?", vi
             mid = vi[75:75+210, 10:10+160, :]
             square = mid[75+50:75+50+160, 10:10+160, :] 
             # divide by 5
@@ -145,7 +144,7 @@ def manipulateState(s, coordX,coordY):
     return np.zeros(shape=[1,84*32])
 
 
-myAgent = agent(lr=1e-2,s_size=84*32,a_size=5,h_size=8) #Load the agent.
+myAgent = agent(lr=1e-2,s_size=84*32,a_size=5,h_size=1036) #Load the agent.
 #s_sze is expecting one input coz its a flat vector (array), sp
 total_episodes = 1000#Set total number of episodes to train agent on.
 update_frequency = 1
