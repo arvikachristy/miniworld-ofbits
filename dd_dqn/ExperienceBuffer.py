@@ -2,7 +2,7 @@ import numpy as np
 import random
 
 class ExperienceBuffer():
-    def __init__(self, buffer_size = 50000):
+    def __init__(self, buffer_size):
         self.buffer = []
         self.buffer_size = buffer_size
     

@@ -19,14 +19,15 @@ tf.reset_default_graph()
 ri_dict = {
   "num_Episodes" : 10000,
   'num_Actions' : 5,
-  'replay_memory_size' : 150000,
-  'replay_memory_init_size' : 15000,
-  'update_target_estimator_every' : 3000,
+  'replay_memory_size' : 500000,
+  'replay_memory_init_size' : 15000, #15000
+  'update_target_estimator_every' : 500,
   'discount_factor' : 0.99,
   'epsilon_start' : 1.0,
-  'epsilon_end': 0.1,
-  'epsilon_decay_steps': 150000,
-  'batch_size' : 32
+  'epsilon_end': 0.05,
+  'epsilon_decay_steps': 500000,
+  'batch_size' : 32,
+  'penalty' : -0.05
 }
 
 # Global dictionary that stores the x-coordinate and y-coordinate values # 
@@ -50,15 +51,14 @@ act_list = {
 class prepState():
   #Downsample a provided state from [160,160,3] to [80,80,1] (Grayscale)
   def __init__(self):
-    self.input_state = tf.placeholder(shape = [210,160,3], dtype = tf.uint8)
+    self.input_state = tf.placeholder(shape = [768,1024,3], dtype = tf.uint8)
     self.output = tf.image.rgb_to_grayscale(self.input_state)
-    self.output = tf.image.crop_to_bounding_box(self.output, 50, 0, 160, 160)
+    self.output = tf.image.crop_to_bounding_box(self.output, 125, 0, 180, 180)
     self.output = tf.image.resize_images(self.output,[84,84], method = tf.image.ResizeMethod.NEAREST_NEIGHBOR)
     self.output = tf.squeeze(self.output)
 
   def process(self, sess, state):
-    crop = state[75:75+210, 10:10+160, :]
-    return sess.run(self.output, feed_dict = {self.input_state: crop})
+    return sess.run(self.output, feed_dict = {self.input_state: state})
 
 #The Q Network class
 class qNetwork():
@@ -83,7 +83,7 @@ class qNetwork():
     #Integer ID of which action was selected
     self.actions_pl = tf.placeholder(shape = [None], dtype = tf.int32, name = "actions")
 
-    X = tf.to_float(self.X_pl) / 255.0 
+    X = tf.to_float(self.X_pl) / 255.0
     batch_size = tf.shape(self.X_pl)[0] #Gets the first index from the shape of X_pl (number of batches)
 
     #Three convolutional layers
@@ -95,6 +95,11 @@ class qNetwork():
     flattened = tf.contrib.layers.flatten(conv3)
     fcl = tf.contrib.layers.fully_connected(flattened, 512)
     self.predictions = tf.contrib.layers.fully_connected(inputs = fcl, num_outputs = ri_dict["num_Actions"])
+    # advantage_net = tf.contrib.layers.fully_connected(flattened, 512, activation_fn = tf.nn.relu)
+    # value_net = tf.contrib.layers.fully_connected(flattened, 512, activation_fn = tf.nn.relu)
+    # advantage = tf.contrib.layers.fully_connected(inputs = advantage_net, num_outputs = ri_dict["num_Actions"])
+    # value = tf.contrib.layers.fully_connected(value_net, 1)
+    # self.predictions = value + tf.subtract(advantage, tf.reduce_mean(advantage, reduction_indices=1, keep_dims=True))
 
     #Get the predictions for the chosen actions only
     gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions_pl
@@ -105,6 +110,7 @@ class qNetwork():
     self.loss = tf.reduce_mean(self.losses)
 
     #Optimizer parameters
+    # self.optimizer = tf.train.AdamOptimizer(learning_rate = 0.00025)
     self.optimizer = tf.train.RMSPropOptimizer(0.00025, 0.99, 0.0, 1e-6)
     self.train_op = self.optimizer.minimize(self.loss, global_step=tf.contrib.framework.get_global_step())
 
@@ -113,6 +119,7 @@ class qNetwork():
       tf.summary.histogram("loss_hist",self.losses),
       tf.summary.histogram("q_values_hist",self.predictions),
       tf.summary.scalar("max_q_value",tf.reduce_max(self.predictions))])
+
   def predict(self, sess, s):
     # Predicts action values for a given state 's' #
     return sess.run(self.predictions, {self.X_pl : s})
@@ -120,11 +127,6 @@ class qNetwork():
   def update(self, sess, s, a, y):
     # Updates the network based upon the given targets #
     # Arguments : s (state input), a(chosen action for state [batch_size]), y (TD target of shape [batch_size])
-
-    # We squeeze 'a' as it contains one single dimension entry that is not necesssary
-    a = np.squeeze(a)
-    # We remove the last dimension from 'y' as it is essentially a duplicate
-    y = y[:, 0]
     feed_dict = {self.X_pl: s, self.y_pl: y, self.actions_pl: a}
     summaries, global_step, _, loss = sess.run([self.summaries, tf.contrib.framework.get_global_step(), self.train_op, self.loss], feed_dict)
     if self.summary_writer:
@@ -164,35 +166,49 @@ def make_epsilon_greedy_policy(qnetwork, numA):
 
 def newCord(act):
   if act == 1:
-    x = cord_dict['yCord'] - 20
+    x = cord_dict['yCord'] - 15
     y = 125
     if np.less_equal(x,y) == 1:
-      print "Position unchanged"
+      print "Attempted to move outside"
+      penalty = ri_dict['penalty']
     else:
       cord_dict['yCord'] = x
+      penalty = 0
+    return penalty
   elif act == 2:
-    x = cord_dict['yCord'] + 20
+    x = cord_dict['yCord'] + 15
     y = 285 
     if np.greater_equal(x,y) == 1:
-      print "Position unchanged"
+      print "Attempted to move outside"
+      penalty = ri_dict['penalty']
     else:
       cord_dict["yCord"] = x
+      penalty = 0
+    return penalty
   elif act == 3:
-    x = cord_dict['xCord'] + 20
-    y = 170
-    if np.greater_equal(x,y) == 1:
-      print "Position unchanged"
-    else:
-      cord_dict["xCord"] = x
-  elif act == 4:
-    x = cord_dict['xCord']-20
+    x = cord_dict['xCord'] - 15
     y = 10
     if np.less_equal(x,y) == 1:
-      print "Position unchanged"
+      print "Attempted to move outside"
+      penalty = ri_dict['penalty']
     else:
       cord_dict["xCord"] = x
+      penalty = 0
+    return penalty
+  elif act == 4:
+    x = cord_dict['xCord'] + 15
+    y = 170
+    if np.greater_equal(x,y) == 1:
+      print "Attempted to move outside"
+      penalty = ri_dict['penalty']
+    else:
+      cord_dict["xCord"] = x
+      penalty = 0
+    return penalty
   elif act == 0:
     print "Click"
+    penalty = 0;
+    return penalty
 
 # randCord randomises the x-cordinate and y-cordinate values # 
 def randCord():
@@ -211,16 +227,18 @@ def chooseAction(action_prob):
 #doAction returns the next action
 def doAction(act_num):
   if act_num == -2:
+    penalty = 0
     action = [universe.spaces.PointerEvent(cord_dict["xCord"], cord_dict["yCord"],0)]
-    return action
+    return penalty, action
   elif act_num == 0:
+    penalty = 0
     action = [universe.spaces.PointerEvent(cord_dict["xCord"], cord_dict["yCord"],1),
               universe.spaces.PointerEvent(cord_dict["xCord"], cord_dict["yCord"],0)]
-    return action
+    return penalty, action
   else:
-    newCord(act_num)
+    penalty = newCord(act_num)
     action = [universe.spaces.PointerEvent(cord_dict["xCord"], cord_dict["yCord"],0)]
-    return action
+    return penalty, action
 
 def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc):
   #Uses the namedTuple module to initialize Experience Replay tuple
@@ -282,11 +300,15 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
     action_probs = policy(sess, state, epsilons[min(total_t, ri_dict["epsilon_decay_steps"]-1)])
     print action_probs
     act = chooseAction(action_probs)
-    action = [doAction(act)]
+    penalty, action = doAction(act)
 
     #Take a step in the environment from the predicted action
-    next_state, reward, done, _ = env.step(action)
+    next_state, reward, done, _ = env.step([action])
+    reward[0] = reward[0] + penalty
     if np.array_equal(next_state, [None]):
+      # pre_state = state
+      # pre_reward = reward
+      # pre_done = done
       #The environment is resetting (likely time is up and is done)
       state = env.reset()
       if np.array_equal(state, [None]):
@@ -294,10 +316,11 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
           state, reward, done, _ = env.step([[]])
       state = state_proc.process(sess, (state[0])['vision'])
       state = np.stack([state] * 4, axis = 2)
+      # replay_memory.append(Transition(pre_state,act,pre_reward,state,pre_done))
     else:
       next_state = state_proc.process(sess, (next_state[0])['vision'])
       next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
-      replay_memory.append(Transition(state,act,reward,next_state,done))
+      replay_memory.append(Transition(state,act,reward[0],next_state,done[0]))
       if done == [True]:
         state = env.reset()
         if np.array_equal(state, [None]):
@@ -346,16 +369,21 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
       action_probs = policy(sess, state, epsilon)
       print action_probs
       act = chooseAction(action_probs)
-      action = [doAction(act)]
-      next_state, reward, done, _ = env.step(action)
+      penalty, action = doAction(act)
+      next_state, reward, done, _ = env.step([action])
+      reward[0] = reward[0] + penalty
       if np.array_equal(next_state, [None]):
         #The environment is resetting (likely time is up and is done)
+        # pre_state = state
+        # pre_reward = reward
+        # pre_done = done
         state = env.reset()
         if np.array_equal(state, [None]):
           while state == [None]:
             state, reward, done, _ = env.step([[]])
         state = state_proc.process(sess, (state[0])['vision'])
         state = np.stack([state] * 4, axis = 2)
+        # replay_memory.append(Transition(pre_state,act,pre_reward,state,pre_done))
         break
       else:
         next_state = state_proc.process(sess, (next_state[0])['vision'])
@@ -364,7 +392,7 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
         if len(replay_memory) == ri_dict["replay_memory_size"]:
           replay_memory.pop(0)
         #Save transition to replay memory
-        replay_memory.append(Transition(state,act,reward,next_state,done))
+        replay_memory.append(Transition(state,act,reward[0],next_state,done[0]))
 
       #Update Statistics
       stats.episode_rewards[i] += reward
@@ -376,9 +404,9 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
 
       #Calculate the q values and targets
       q_values_next = qnetwork.predict(sess, next_states_batch)
-      best_actions = np.argmax(q_values_next, axis = 1)
       q_values_next_target = targetNetwork.predict(sess, next_states_batch)
-      targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * ri_dict["discount_factor"] * q_values_next_target[np.arange(ri_dict["batch_size"]), best_actions]
+      best_actions = np.argmax(q_values_next, axis = 1)
+      targets_batch = reward_batch + (np.invert(done_batch).astype(np.float32) * ri_dict["discount_factor"] * q_values_next_target[np.arange(ri_dict["batch_size"]), best_actions])
 
       #Perform gradient descent update
       states_batch = np.array(states_batch)
@@ -405,7 +433,7 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
 
     yield total_t, plotting.EpisodeStats(episode_lengths = stats.episode_lengths[:i+1],episode_rewards = stats.episode_rewards[:i+1])
 
-env = gym.make('wob.mini.ClickTest-v0')
+env = gym.make('wob.mini.TicTacToe-v0')
 env.configure(remotes=1, fps=15,
               vnc_driver='go', 
               vnc_kwargs={'encoding': 'tight', 'compress_level': 0, 
