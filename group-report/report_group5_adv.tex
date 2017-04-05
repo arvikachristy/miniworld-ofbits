@@ -539,6 +539,7 @@ pdfkeywords={Computer Society, IEEEtran, journal, LaTeX, paper,
 % a separate \thanks must be used for each paragraph as LaTeX2e's \thanks
 % was not built to handle multiple paragraphs
 %
+
 %
 %\IEEEcompsocitemizethanks is a special \thanks that produces the bulleted
 % lists the Computer Society journals use for "first footnote" author
@@ -552,7 +553,10 @@ pdfkeywords={Computer Society, IEEEtran, journal, LaTeX, paper,
 % journal papers have the author affiliations above the "Manuscript
 % received ..."  text while in non-compsoc journals this is reversed. Sigh.
 
-\author{Minttu Alakuijala, Vika Christy, Rajind Karunaratne, Jamie Law, Yuhang Xu, and Jun Wang}
+\author{Minttu Alakuijala, Vika Christy, Rajind Karunaratne, Jamie Law, Yuhang Xu, and Jun Wang
+\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem Source code available at: https://github.com/arvikachristy/miniworld-ofbits.\protect\\
+\IEEEcompsocthanksitem Based on OpenAI's Mini World of Bits project found at: http://alpha.openai.com/miniwob/index.html
+}}
         %and~Jane~Doe,~\IEEEmembership{Life~Fellow,~IEEE}% <-this % stops a space
 %\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem M. Shell was with the Department
 %of Electrical and Computer Engineering, Georgia Institute of Technology, Atlanta,
@@ -734,11 +738,15 @@ During training, rewards received from the environment are used to adjust the po
 %\\In this research, the vanilla Policy Gradient was chosen as the main on-policy approach. To get a basic vanilla Policy Gradient to work, we had to do some visual manipulation to the state and use discrete action spaces with a Convolutional Neural Network (CNN) as the policy. At first, we tried to use a fully connected network as the policy, however the network has too many parameters and is more difficult to train whereas CNN considers neighbouring pixels to shrink down the calculation time and space.
 
 \subsection{Q-learning}
-Another notable variant of model-free RL is Q-learning\cite{watkins1989learning}, which approximates an action-value function $Q(S, A)$, representing how much value the agent predicts it will receive in the long run from taking action $A$ in state $S$. For a time step $t$, $Q$ is defined\cite{qlearning} as \[Q(S_t, A_t) = R_t + \gamma Q(S_{t+1}, A_{t+1})\] where $R_t$ is the reward received after taking action $A; S_{t+1}$ the state transitioned to; and $\gamma$ is the discount factor [0, 1], which determines the importance of future rewards relative to current ones.  A \(\gamma\) of 0 causes future rewards beyond the current time step to be neglected, whereas a \(\gamma\) of 1 gives a distant future reward equal weight as a reward in the near future. An action is selected by calculating the maximum Q-value of the action space in the current state. In order to eventually converge at an optimal policy, the Q-function is updated by minimising TD error at each time step $t$:
-\begin{align*}
-Q\left( \mbox{S}_{t},\; A_{t} \right)\; &\leftarrow\;Q\left( \mbox{S}_{t},\; A_{t} \right)\;\\ 
-&+\; \alpha_{t}\left[ R_{t+1}\; +\; \gamma \max _{a}Q\left( \mbox{S}_{t+1},\; A \right)\; -\; Q\left( \mbox{S}_{t},\; A_{t} \right) \right]
-\end{align*}
+Another notable variant of model-free RL is Q-learning\cite{watkins1989learning}, which approximates an action-value function $Q(S, A)$, representing how much value the agent predicts it will receive in the long run from taking action $A$ in state $S$. For a time step $t$, $Q$ is defined as:
+\begin{equation}
+Q(S_t, A_t) = R_t + \gamma Q(S_{t+1}, A_{t+1})
+\end{equation}
+where $R_t$ is the reward received after taking action $A; S_{t+1}$ the state transitioned to; and $\gamma$ the discount factor [0, 1], which determines the importance of future rewards relative to current ones.  A \(\gamma\) of 0 causes future rewards beyond the current time step to be neglected, whereas a \(\gamma\) of 1 gives a distant future reward equal weight as a reward in the near future. An action is selected by calculating the maximum Q-value of the action space in the current state. In order to eventually converge at an optimal policy, the Q-function is updated by minimising TD error at each time step $t$:
+\begin{align}
+Q\left( \mbox{S}_{t},\; A_{t} \right)\; &\leftarrow\;Q\left( \mbox{S}_{t},\; A_{t} \right)\; \notag \\
+ &+\; \alpha_{t}\left[ R_{t+1}\; +\; \gamma \max _{a}Q\left( \mbox{S}_{t+1},\; A \right)\; -\; Q\left( \mbox{S}_{t},\; A_{t} \right) \right]
+\end{align}
 \indent
 consisting of:
 \begin{itemize}
@@ -759,14 +767,14 @@ The main Q-network is implemented as a Convolutional Neural Network (CNN). This 
 
 \item \textbf{Target Network} :
 Mnih et al. make use of a secondary neural network that is, for the most part, a duplicate of the Q-Network mentioned above, but with its parameters \(\theta\) copied over with a delay of $n$ steps. The Q-values produced from this network are used to compute the TD loss function. In this way, the delay in updating the target values adds stability to the learning process. For a target network with parameters \(\theta ^{-}\) and a Q-network with parameters \(\theta\), the target value is defined in \cite{deepqlearning} as follows :
-\begin{align*}
+\begin{equation}
 T_{DQN}\; = ( R\; +\; \lambda \max _{a}Q\left( \mbox{S}_{t+1},\; A_{t+1},\; \theta ^{-} \right)
-\end{align*}
+\end{equation}
 
 With the loss function defined as follows:
-\begin{align*}
+\begin{equation}
 L\left( \theta  \right)\; =\; \mbox{E}_{\mbox{S},A,\mbox{S}_{t+1},R,D}\; \cdot \; \left[ \left(T_{DQN}\; -\; Q\left( \mbox{S},\; A,\; \theta  \right) \right)^{2}\right]
-\end{align*}
+\end{equation}
 
 \item \textbf{Experience Replay} : Before the training process, the agent's experiences at each time step $t$ are stored in the form of a tuple represented as (\({{S}}_{{t}}\), \({{A}}_{{t}}\), \({{R}}_{{t+1}}\), \({{S}}_{{t+1}}\), \(d\)), with \(d\) a boolean variable signifying if the step completes the episode. These tuples are stored in a replay memory \(D\) with a certain initial capacity. At every training step, the agent samples a batch of tuples from \(D\) that is fed into the network to update the Q-function. This process was later improved upon with the introduction of \textit{Prioritized Experience Replay}\cite{per}, which makes an addition of error-indices to each tuple, representing how much this experience differs from the predictions of the policy, and stores the tuples in a binary heap tree instead of a linear buffer.
 \end{itemize}
@@ -778,9 +786,9 @@ Building on the DQN architecture, the Dueling DQN approach \cite{wang2015dueling
 
 \subsubsection{Double Deep Q-learning}
 The DQN uses a max operator to select and evaluate actions upon a given state with the target network. The problem with this approach is that this can lead to selection of overestimated values, which can delay the time in learning the optimal policy. A simple improvement to this, referred to as the Double Deep Q-Network \cite{doubledeepqlearning}, uses a different equation to update the target value :
-\begin{align*}
+\begin{equation}
 T_{DDQN}\; =\; R\; +\; \lambda Q\left( \mbox{S}_{t+1},\; \mbox{argmax}Q\left( \mbox{S}_{t+1},\; a,\; \theta ^{-} \right),\; \theta ^{-} \right)
-\end{align*}
+\end{equation}
 \subsection{Imitation learning}
 In scenarios with large action spaces and complicated tasks, exploring the entire action space uniformly at random can be intractable. In such a case, training can more efficiently begin based on a set of supervised, ideal actions. In Inverse Reinforcement Learning, the agent learns the reward function of the environment by observing these optimal actions performed by an expert, rather than learning a policy or a value function through its own actions. Using this learning method, Abbeel and Ng were able to retrieve a policy with comparable performance to that of the original expert \cite{abbeel2004apprenticeship}.
 \section{Methodology}
@@ -961,12 +969,14 @@ Our results show that the Double Duelling DQN performs significantly better than
 
 When comparing results across the three tasks investigated, it is apparent that some of them were harder than others to solve. The performance of the baseline random agent served as an indication of the overall difficulty of each environment. Out of the tasks we considered, CloseDialog was the most difficult, as its target region was significantly smaller and less visually conspicuous than that of other environments. What boosted the performance of both random and learning agents on the FocusText environment was further reducing the action space by omitting horizontal actions, which allowed the agents to only focus on vertical and click actions. \\
 
+Unexpected results from some agents that scored relatively lower than desired may have been due to a training network that was not properly implemented. Every later was investigated and one of the most common possibilities is overfitting/underfitting the network. If this occurs, the network may not be able to generalise new data. It is very common in typical Neural Network implementation to miscalculate the perfect size of the network. Nevertheless, it is very difficult to know (at an early stage of training) the exact size of the network layer that can be deemed suitable for a particular application.
+
 Potential factors limiting our observed learning performance could be insufficient training as well as divergence of the policy or Q-function approximator. Our agents can only learn the value of each action or policy from the data that is fed to them (the state of the environment). All of our agents tend to move towards the centre of the canvas and even towards the target area after a number of training steps, which shows that our agents manage to convert their vision into features such as the cursor's current coordinates and to identify the border of the environment, meaning that they are able to capture information that is relevant to the task at hand. Although our results still have room for improvement, it is worth noting that due to a delay in reaction time, not even a human could achieve a perfect 1.0 mean reward on these environments.
 
 \subsection{The effect of hyperparameters}
 As described earlier, identifying optimal hyperparamaters of an agent is crucial to progressive learning. For example, within the neural network of an agent, a larger learning rate for the relevant optimization method could speed up the learning process. However, it is hard to identify a proper decay rate -- a higher decay rate might not guarantee sufficient exploration for an agent, whereas a lower decay rate will postpone the stage for an agent to see a dramatic rise in reward.
 
-When we consider the varying aspects of the different environments within the benchmark (different time constraints, complexity of task and action spaces required, rewards etc.), different hyperparameter values need to be taken into consideration to optimize the learning behavior of an agent. Unoptimized agents tend to show convergence of their predictions to a constant set of 0'€™s throughout the remainder of the training process. Such changes could vary from more generalized optimization parameters (the learning and decay rate) to more agent-specific parameters (target network update frequency and discount factor within Deep Q-networks). 
+When we consider the varying aspects of the different environments within the benchmark (different time constraints, complexity of task and action spaces required, rewards etc.), different hyperparameter values need to be taken into consideration to optimize the learning behavior of an agent. Unoptimized agents tend to show convergence of their predictions to a constant set of 0's throughout the remainder of the training process. Such changes could vary from more generalized optimization parameters (the learning and decay rate) to more agent-specific parameters (target network update frequency and discount factor within Deep Q-networks). 
  
 \section{Limitations}
 
@@ -999,7 +1009,7 @@ For example, if magnitude was -0.5, the angle to move would be -\( 0.5\pi \). A 
 This method could prove to be more effective than existing methods that we have implemented due to the fact that hypothetically it would learn quicker; the mouse can navigate to anywhere within the canvas in one step instead of a discretised action space where it would have to slowly navigate to a designated area via several steps.
 
 \subsubsection{Natural language processing}
-Another development would be performing natural language processing (NLP) on the webpage. To elaborate on this with an example, if the question told us to enter a certain word into a text box, we would need NLP to identify this in the prompt in accordance with the agent to correspond with the features identified in the canvas. This can further be extended by analysing the vision to find relevant text via two possible methods:
+Another development would be performing natural language processing (NLP) on the webpage. To elaborate on this with an example, if the question told us to enter a certain word into a text box, we would need NLP to identify this in the prompt in accordance with the agent to correspond with the features identified in the canvas. This can further be extended by analysing the vision to find relevant text via two possible methods \cite{dale2000handbook} \cite{allen2011interactive}:
 \indent
 \begin{itemize}
 \item Optical Character Recognition (OCR) - identify and convert webpage text into machine-encoded text. This is eased by the fact that we are already performing input processing on the image fed to the agent, such that pre-processes in OCR such as binarisation are not needed. 
