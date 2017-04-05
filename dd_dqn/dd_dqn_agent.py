@@ -419,7 +419,7 @@ def trainQNs(sess, mainQN, targetQN, learning_rate, stochastic_policy, use_softm
     _ = sess.run(mainQN.updateModel, \
         feed_dict={mainQN.imageIn:np.stack(trainBatch[:,0]),
             mainQN.targetQ:targetQ,
-            mainQN.actions:trainBatch[:,1]})
+            mainQN.actions:trainBatch[:,1],
             mainQN.learning_rate:learning_rate})
 
 def printSummary(stepList, rList, e, learning_rate, rewards, successes, fails, misses):
@@ -518,19 +518,19 @@ def dd_dqn_main():
     batch_size = 32 # How many experiences to use for each training step.
     update_freq = 4 # How often to perform a training step.
     y = .99 # Discount factor on the target Q-values
-    start_learning_rate = 0.0001#0.001#0.1
-    end_learning_rate = 0.0001
+    start_learning_rate = 0.00025#0.001#0.1
+    end_learning_rate = 0.00025
     learning_anneling_steps = 1000
     start_epsilon = 1 # Starting chance of random action
     end_epsilon = 0.1 # Final chance of random action
-    anneling_steps = 900000. # How many steps of training to reduce startE to endE.
+    anneling_steps = 1000000. # How many steps of training to reduce startE to endE.
     num_episodes = 15000 # How many episodes of game environment to train network with.
-    pre_train_steps = 500#0 # How many steps of random actions before training begins.
-    pre_anneling_steps = 500#00 # How many steps of training before decaying epsilon
+    pre_train_steps = 50000 # How many steps of random actions before training begins.
+    pre_anneling_steps = 0#50000 # How many steps of training before decaying epsilon
     num_supervised_episodes = 0 # How many episodes to train on supervised actions.
     experience_buffer_size = 15000 # How many past steps are stored in the buffer at any one time.
     h_size = 512 # The size of the final layer before splitting it into Advantage and Value streams.
-    tau = 0.001 # Rate to update target network toward primary network
+    tau = 0.0001 # Rate to update target network toward primary network
     num_actions = 6
     step_size = 15 # How many pixels to move in one action
     cursor_height = 15
@@ -539,8 +539,8 @@ def dd_dqn_main():
 
     load_model = False # Whether to load a saved model.
     checkpoint_path, evaluation_path, tboard_path = getOutputDirNames()
-    plot_vision = True # Plot the agent's view of the environment
-    show_heatmap = True
+    plot_vision = False # Plot the agent's view of the environment
+    show_heatmap = False
     include_rgb = False # If true, use an RGB view as input. If false, convert to grayscale.
     include_prompt = False # If true, include yellow prompt in input.
     stochastic_policy = True # If true, Q-function defines a probability distribution
