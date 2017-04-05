@@ -98,8 +98,10 @@ class QLearner():
     
     self.td_error = tf.square(self.targetQ - self.Q)
     self.loss = tf.reduce_mean(self.td_error)
+    #self.learning_rate = tf.placeholder(shape=[], dtype=tf.float32)
     self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
     self.updateModel = self.trainer.minimize(self.loss)
+    #self.updateModel = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
 def rgbToGrayscale(img):
     h, w, _ = img.shape
@@ -195,7 +197,8 @@ def intToVNCAction(a, x, y, step_size):
             return [universe.spaces.PointerEvent(x + step_size, y, 0)], x + step_size, y
     elif a == 5:
         return [universe.spaces.PointerEvent(x, y, 0)], x, y
-    print 'Cannot take action (', a, ')'
+    action_numbers = {0: 'CLICK', 1: 'UP', 2: 'DOWN', 3: 'LEFT', 4: 'RIGHT', 5: 'STAY'}
+    #print 'Cannot take action (', action_numbers[a], ')'
     return [], x, y
 
 def getEpisodeNumber(info, prev):
@@ -247,7 +250,7 @@ def chooseActionFromSingleQOut(singleQOut, use_probs, use_softmax, print_probs):
         return np.random.randint(0, len(singleQOut))
     elif use_probs:
         if use_softmax:
-            probs = softmax(singleQOut)
+            probs = softMax(singleQOut)
         else:
             probs = linearDistribution(singleQOut) 
         if print_probs:
@@ -375,16 +378,16 @@ def sampleAction(sess, raw_s, s, prevX, prevY, mainQN, num_actions, epsilon, ste
         if a_num != -1:
             return a_num
 
+    QOut = sess.run(mainQN.QOut, feed_dict={mainQN.imageIn:[s]})[0]
+    Value = sess.run(mainQN.Value, feed_dict={mainQN.imageIn:[s]})[0]
+    Advantage = sess.run(mainQN.Advantage, feed_dict={mainQN.imageIn:[s]})[0]
+    print QOut, 'V', Value, 'A', Advantage
     if np.random.rand(1) < epsilon or total_steps < pre_train_steps:
         a_num = np.random.randint(0, num_actions)
-        QOut, Value, Advantage = [], [], []
     else:
-        QOut = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:[s]})[0]
-        Value = sess.run(mainQN.Value,feed_dict={mainQN.imageIn:[s]})[0]
-        Advantage = sess.run(mainQN.Advantage, feed_dict={mainQN.imageIn:[s]})[0]
+        #QOut, Value, Advantage = sess.run(mainQN.QOut, mainQN.Value, mainQN.Advantage,feed_dict={mainQN.imageIn:[s]})[0]
         #print 'V, A before QOut calculation:', Value, Advantage
         #QOut = Value + tf.subtract(Advantage, tf.reduce_mean(Advantage, reduction_indices=1, keep_dims=True))
-        print QOut, 'V', Value, 'A', Advantage
         a_num = chooseActionFromQOut(QOut, stochastic_policy, use_softmax, print_probs=True)
         print step_num, 'Decided',
         action_numbers = {0: 'CLICK', 1: 'UP', 2: 'DOWN', 3: 'LEFT', 4: 'RIGHT', 5: 'STAY'}
@@ -404,12 +407,12 @@ def addReward(r, rewards, successes, fails, misses):
     rewards.append(r)
     return rewards, successes, fails, misses
 
-def discountEpsilon(epsilon, step_drop, end_epsilon):
-    if epsilon > end_epsilon:
-        epsilon -= step_drop
-    return epsilon
+def discountHyperParameter(param, step_drop, end_value):
+    if param > end_value:
+        param -= step_drop
+    return param
 
-def trainQNs(sess, mainQN, targetQN, stochastic_policy, use_softmax, trainBatch, batch_size, y):
+def trainQNs(sess, mainQN, targetQN, learning_rate, stochastic_policy, use_softmax, trainBatch, batch_size, y):
     QOut1 = sess.run(mainQN.QOut,feed_dict={mainQN.imageIn:np.stack(trainBatch[:,3])})
     Q1 = chooseActionFromQOut(QOut1, stochastic_policy, use_softmax, print_probs=False)
     Q2 = sess.run(targetQN.QOut,feed_dict={targetQN.imageIn:np.stack(trainBatch[:,3])})
@@ -421,11 +424,12 @@ def trainQNs(sess, mainQN, targetQN, stochastic_policy, use_softmax, trainBatch,
         feed_dict={mainQN.imageIn:np.stack(trainBatch[:,0]),
             mainQN.targetQ:targetQ,
             mainQN.actions:trainBatch[:,1]})
+            #mainQN.learning_rate:learning_rate})
 
-def printSummary(stepList, rList, e, rewards, successes, fails, misses):
+def printSummary(stepList, rList, e, learning_rate, rewards, successes, fails, misses):
     print 'Actions taken', np.sum(stepList)
     print 'Average reward (last 100):', np.mean(rList[-100:]), '(last 10)', np.mean(rList[-10:])
-    print 'Epsilon:', e
+    print 'Epsilon:', e, '\tLearning rate', learning_rate
     print 'Successes:', successes, ':', float(successes)/len(rList), '\t', \
     'Fails:', fails, ':', float(fails)/len(rList), '\t', \
     'Misses:', misses, ':', float(misses)/len(rList), '\t' \
@@ -452,7 +456,41 @@ def loadModel(sess, saver, checkpoint_path):
     ckpt = tf.train.get_checkpoint_state(checkpoint_path)
     saver.restore(sess, ckpt.model_checkpoint_path)
 
-def plotVision(s, include_rgb, show_heatmap, prevX, prevY, step_size, Q):
+def translateQsToGrayscale(qs):
+    if len(qs) == 0:
+        return qs
+    elif len(qs) == 1:
+        return [0.5]
+    visual_min = 0.0
+    visual_max = 1.0
+    visual_span = visual_max - visual_min
+    q_span = max(qs) - min(qs)
+    qs_scaled = [visual_min + ((float(q) - min(qs))/q_span) * visual_span for q in qs]
+    return qs_scaled
+
+def translateQsToRGB(qs):
+    q_pos = filter(lambda q: q > 0, qs)#[q in q for qs if q > 0]
+    q_neg = filter(lambda q: q < 0, qs)#[q in q for qs if q < 0]
+    q_pos_scaled = translateQsToGrayscale(q_pos)
+    q_neg_scaled = [q * -1 for q in translateQsToGrayscale(q_neg)]
+    q_neg_scaled = [q + 1 for q in q_neg_scaled]
+    qs_scaled = []
+    i_pos = 0
+    i_neg = 0
+    # Reconstruct original order
+    for q in qs:
+        if q > 0:
+            qs_scaled.append(q_pos_scaled[i_pos])
+            i_pos += 1
+        elif q < 0:
+            qs_scaled.append(q_neg_scaled[i_neg])
+            i_neg += 1
+        else:
+            qs_scaled.append(0)
+    return qs_scaled
+    #sq_scaled = [(1-i,i,0) for i in your_floats]
+
+def plotVision(s, include_rgb, show_heatmap=False, prevX=0, prevY=0, step_size=0, Q=0, unicolor=False):
     plt.close()
     if include_rgb:
         plt.imshow(s)
@@ -460,17 +498,22 @@ def plotVision(s, include_rgb, show_heatmap, prevX, prevY, step_size, Q):
         # Drop last dimension (of length 1)
         s = s.reshape(s.shape[:-1])
         plt.imshow(s, cmap='gray')
-        if show_heatmap:
-            #xs = [prevX, ]
-            #ys = 
-            print 'Q before', Q
-            Q /= np.max(Q)
-            print 'Q intermediate', Q
-            Q += np.min(Q)
-            print 'Q after', Q
+        if show_heatmap and len(Q) > 0:
+            if unicolor:
+                Q_visual = translateQsToGrayscale(Q)
+            else:
+                Q_visual = translateQsToRGB(Q)
             for action in range(0, 5):
                 _, x, y = intToVNCAction(action, prevX, prevY, step_size)
-                plt.scatter(x, y, s=5, c='red', alpha=Q[action])
+                visual_x = (x - 10)/2
+                visual_y = (y - 50 - 75)/2
+                if not unicolor and Q[action] > 0:
+                    colour = 'green'
+                elif not unicolor and Q[action] == 0:
+                    colour = 'yellow'
+                else:
+                    colour = 'red'
+                plt.scatter(visual_x, visual_y, s=15, c=colour, alpha=max(min(Q_visual[action], 1), 0.03))
     plt.show(block=False)
 
 
@@ -479,12 +522,15 @@ def dd_dqn_main():
     batch_size = 32 # How many experiences to use for each training step.
     update_freq = 4 # How often to perform a training step.
     y = .99 # Discount factor on the target Q-values
+    start_learning_rate = 0.0001#0.001#0.1
+    end_learning_rate = 0.0001
+    learning_anneling_steps = 1000
     start_epsilon = 1 # Starting chance of random action
     end_epsilon = 0.1 # Final chance of random action
-    anneling_steps = 900#000. # How many steps of training to reduce startE to endE.
+    anneling_steps = 900000. # How many steps of training to reduce startE to endE.
     num_episodes = 15000 # How many episodes of game environment to train network with.
     pre_train_steps = 500#0 # How many steps of random actions before training begins.
-    pre_anneling_steps = 0#50000 # How many steps of training before decaying epsilon
+    pre_anneling_steps = 500#00 # How many steps of training before decaying epsilon
     num_supervised_episodes = 0 # How many episodes to train on supervised actions.
     experience_buffer_size = 15000 # How many past steps are stored in the buffer at any one time.
     h_size = 512 # The size of the final layer before splitting it into Advantage and Value streams.
@@ -497,12 +543,12 @@ def dd_dqn_main():
 
     load_model = False # Whether to load a saved model.
     checkpoint_path, evaluation_path, tboard_path = getOutputDirNames()
-    plot_vision = False # Plot the agent's view of the environment
+    plot_vision = True # Plot the agent's view of the environment
     show_heatmap = True
     include_rgb = False # If true, use an RGB view as input. If false, convert to grayscale.
     include_prompt = False # If true, include yellow prompt in input.
     stochastic_policy = True # If true, Q-function defines a probability distribution
-    use_softmax = False # Whether to use softmax in deriving probability distribution form Q-values
+    use_softmax = True # Whether to use softmax in deriving probability distribution form Q-values
     include_stay = False # Include STAY as an action
     include_horizontal_moves = True # Include LEFT and RIGHT as actions
     if not include_stay:
@@ -553,7 +599,10 @@ def dd_dqn_main():
 
     #Set the rate of random action decrease. 
     epsilon = start_epsilon
-    step_drop = (start_epsilon - end_epsilon)/anneling_steps
+    epsilon_step_drop = (start_epsilon - end_epsilon)/anneling_steps
+
+    learning_rate = start_learning_rate
+    learning_step_drop = (start_learning_rate - end_learning_rate)/learning_anneling_steps
 
     #create lists to contain total rewards and steps per episode
     stepList = []
@@ -613,17 +662,18 @@ def dd_dqn_main():
                 else:
                     r_scaled = r[0]#-1#
                 episodeBuffer.add(np.reshape(np.array([s,a_num,r_scaled,s1,d[0]]),[1,5])) #Save the experience to our episode buffer.
-                
+
                 if total_steps > pre_train_steps:
                     if total_steps > pre_train_steps + pre_anneling_steps:
-                            epsilon = discountEpsilon(epsilon, step_drop, end_epsilon)
+                            epsilon = discountHyperParameter(epsilon, epsilon_step_drop, end_epsilon)
                     if (total_steps + step_num) % (update_freq) == 0:
                         num_training_steps += 1
                         #print 'Training step'
                         trainBatch = myBuffer.sample(batch_size) #Get a random batch of experiences.
                         #Below we perform the Double-DQN update to the target Q-values
-                        trainQNs(sess, mainQN, targetQN, stochastic_policy, use_softmax, trainBatch, batch_size, y)
+                        trainQNs(sess, mainQN, targetQN, learning_rate, stochastic_policy, use_softmax, trainBatch, batch_size, y)
                         updateTarget(sess, targetOps) #Set the target network to be equal to the primary network.
+                        learning_rate = discountHyperParameter(learning_rate, learning_step_drop, end_learning_rate)
                 rAll += r[0]
                 
                 if d[0] == True:
@@ -639,6 +689,7 @@ def dd_dqn_main():
                             episode_summary = tf.Summary()
                             episode_summary.value.add(simple_value=r[0], tag="Reward")
                             episode_summary.value.add(simple_value=epsilon, tag="Epsilon")
+                            episode_summary.value.add(simple_value=learning_rate, tag="Learning Rate")
                             episode_summary.value.add(simple_value=total_steps, tag="Total steps")
                             episode_summary.value.add(simple_value=num_training_steps, tag="Total training steps")
                             episode_summary.value.add(simple_value=step_num, tag="Actions per episode")
@@ -646,25 +697,12 @@ def dd_dqn_main():
                             episode_summary.value.add(simple_value=float(fails)/len(rewards), tag="Fail-%")
                             episode_summary.value.add(simple_value=float(misses)/len(rewards), tag="Miss-%")
                             if len(Q) > 0:
-                                #QT = tf.constant(Q)
-                                #VT = tf.constant(V)
-                                #AT = tf.constant(A)
-                                #print type(QT), type(VT), type(AT), QT, VT, AT
-                                #tf.Summary(value=[tf.Summary.Value(tag="auc", simple_value=auc)]))
                                 for i in range(len(Q)):
                                     episode_summary.value.add(simple_value=Q[i], tag="Q-"+str(i))
                                 for i in range(len(V)):
                                     episode_summary.value.add(simple_value=V[i], tag="V-"+str(i))
                                 for i in range(len(A)):
                                     episode_summary.value.add(simple_value=A[i], tag="A-"+str(i))
-                                #q_summaries = tf.summary.merge([
-                                #tf.summary.histogram("Q", QT),#sess.run(mainQN.QOut, feed_dict={mainQN.imageIn:[s]})
-                                #tf.summary.histogram("V", VT),#sess.run(mainQN.Value, feed_dict={mainQN.imageIn:[s]}))
-                                #tf.summary.histogram("A", AT)])#sess.run(mainQN.Advantage, feed_dict={mainQN.imageIn:[s]}))
-                                #episode_summary.value.add(simple_value=Q, tag="Q")
-                                #episode_summary.value.add(simple_value=V, tag="V")
-                                #episode_summary.value.add(simple_value=A, tag="A")
-                                #summary_writer.add_summary(q_summaries, total_t)
                             summary_writer.add_summary(episode_summary, total_t)
                             summary_writer.flush()
                             total_t += 1
@@ -674,7 +712,7 @@ def dd_dqn_main():
                 if not save_history:
                     env.render()
                 if plot_vision:
-                    plotVision(s1, include_rgb, show_heatmap)
+                    plotVision(s1, include_rgb, show_heatmap, prevX, prevY, step_size, Q)
             
             #Get all experiences from this episode and discount their rewards.
             myBuffer.add(episodeBuffer.buffer)
@@ -686,7 +724,7 @@ def dd_dqn_main():
                 saver.save(sess, checkpoint_path+'/model', global_step=ep_num)#+'.cptk')
                 print "Saved Model"
             if ep_num % summary_print_freq == 0:
-                printSummary(stepList, rList, epsilon, rewards, successes, fails, misses)
+                printSummary(stepList, rList, epsilon, learning_rate, rewards, successes, fails, misses)
         if save_history:
             saver.save(sess, checkpoint_path+'/model-'+str(ep_num)+'.cptk')
     print "Average reward: ", np.mean(rList)
