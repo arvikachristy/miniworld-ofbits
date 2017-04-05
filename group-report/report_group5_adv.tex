@@ -795,13 +795,13 @@ In scenarios with large action spaces and complicated tasks, exploring the entir
 
 \subsection{Environments}
 
-\begin{figure}[h!]
+The benchmark consists of 80 environments, which are written in a combination of HTML, JavaScript and CSS, although the agents can not perceive this information via Universe. Each environment is a 210px by 160px webpage, where the yellow section indicates the task prompt and the white section is the canvas area for performing the task (examples of environments can be seen in figure \ref{fig:mwob}). The agents receive visual information in the form of raw pixel values of the webpage and can produce a combination of keyboard or mouse actions in an attempt to complete the task. They also receive a reward value based on their performance, ranging from 0 to 1 if the task is completed (dependent on the time taken for completion) and -1 if the task is failed or time has run out.
+
+\begin{figure}[t!]
 	\includegraphics[width=\linewidth]{chosen-envi.png}
 	\caption{Environments 1. Click The Button, 2. Focus Into The Textbox, 3. Close The Dialog Box}
 	\label{fig:chosen-envi}
 \end{figure}
-
-The benchmark consists of 80 environments, which are written in a combination of HTML, JavaScript and CSS, although the agents can not perceive this information via Universe. Each environment is a 210px by 160px webpage, where the yellow section indicates the task prompt and the white section is the canvas area for performing the task (examples of environments can be seen in figure \ref{fig:mwob}). The agents receive visual information in the form of raw pixel values of the webpage and can produce a combination of keyboard or mouse actions in an attempt to complete the task. They also receive a reward value based on their performance, ranging from 0 to 1 if the task is completed (dependent on the time taken for completion) and -1 if the task is failed or time has run out.
 
 To limit the scope of the problem, we chose a few environments to focus on. There are four categories of environments within WMoB: click tasks, drag tasks, mouse tasks and tasks requiring both mouse and keyboard actions. For now, our main goal was to tackle click tasks problems, out of which we left out environments that require Natural Language Processing. In the following sections, we report results on three environments depicted in figure \ref{fig:chosen-envi}: click the button, focus into the textbox, and close the dialog box. These three environments pose similar tasks that are achievable by creating a policy that clicks on the right area of the 2D action space.
 
@@ -819,10 +819,7 @@ When we consider conventional human behavior, controlling \textit{mouse-based} a
 
 Of course, the above model of the action space does not address many other factors that arise in controlling browser-based applications. For example, we do not consider non-cardinal directions, dragging actions, or scroll actions to navigate through pages to find elements of interest. Furthermore, the discretization of action spaces is a poor solution when it comes to speed. A more efficient solution can easily be defined, namely for the cursor to simply warp to a point on the canvas -- similar to an individual clicking a point on a touchscreen. However, when we consider the scale of the canvas' dimensions of 160x160 pixels (25,600 possible cursor positions), considering each pixel in this space as an individual action would be impractical and computationally expensive, and thus approximating this space using continuous action spaces is a more efficient solution if we were to consider this approach. Yet realistically, a majority of conventional browser tasks require contextual awareness of the tasks to be performed rather than the actions themselves, which is why our approach first defines the basic foundations of movement and control, which further complexities can be built upon.
 
-\subsection{Input processing}
-Generated states for any environment within Universe are represented as raw pixel data, which serve as the primary source of visual context for any agent. As this was the primary means of supervision used in the training process, we sought to investigate techniques to manipulate this data that could help provide an increase in efficiency during training. Some general methods, such as converting images from RGB to grayscale for environments that did not require color co-ordination, and downsampling images to reduce their size, decreased the amount of computation required for an agent to interpret the pixels. In addition, the pixel data was supplemented with more complex additions with the aim of providing increased contextual awareness for the agent.
-
-\begin{figure}[h!]
+\begin{figure}[t!]
 \centering
 	\subfloat{%
 	\begin{minipage}[b][8cm][t]{.2\textwidth}
@@ -835,6 +832,9 @@ Generated states for any environment within Universe are represented as raw pixe
 	\caption{Screen shots of different input processing techniques. The top left is a grayscaled and downsampled image of 84x84 pixels. Additionally, the key addition is that the last four frames before the current state are stacked into one image to provide directional information. The right image also uses a downsampled view of the canvas. This method, however, makes use of an additional field-of-view for the agent, or a sort of \textit{"second eyesight"} that has a magnified view of the cursor up-close that also follows its movement. The bottom-left presents an illustration for an implementation of Harris Corner Detection using the SciKit-Image library. This corner data is given to the agent along with the pixel information to identify features (buttons, checkboxes, etc.) on the canvas more easily.}
 	\label{fig:inputprocessing}
 \end{figure}
+
+\subsection{Input processing}
+Generated states for any environment within Universe are represented as raw pixel data, which serve as the primary source of visual context for any agent. As this was the primary means of supervision used in the training process, we sought to investigate techniques to manipulate this data that could help provide an increase in efficiency during training. Some general methods, such as converting images from RGB to grayscale for environments that did not require color co-ordination, and downsampling images to reduce their size, decreased the amount of computation required for an agent to interpret the pixels. In addition, the pixel data was supplemented with more complex additions with the aim of providing increased contextual awareness for the agent.
 
 Figure \ref{fig:inputprocessing} presents three screen-shots that showcase some of these additions.  All these processing techniques have a general aim of providing an increased sense of supervision to the agent in hopes of speeding up the training process.
 
@@ -851,11 +851,10 @@ It proved to be challenging to fit Vanilla PG into the MWoB environment without 
 
 \subsubsection{Off-policy methods}  
 %An agent following an off-policy approach inherits the behavior of following the recommended actions off of a second \(\epsilon\)-greedy policy, rather than an action the actual policy \(\pi\) might recommend it to take. This might result an agent to take actions of large consequences, but slowly learns to converge to an optimal policy over time.
-Out of off-policy methods, we decided to primarily look into adaptations of the Deep Q-network in this project. %\linebreak
-%\paragraph{\bf Deep Q-learning}
+Out of off-policy methods, we decided to primarily look into adaptations of the Deep Q-network in this project.
 Since the approach we took models a discrete action space, DQNs were adaptable with this environment. The incorporation of a CNN allowed us to easily feed the pixel data (having been processed with techniques mentioned above) to the network and provide predictions for a fixed number of actions. As described earlier, mouse-based controls were generalized to 5 discrete actions (with also an additional 6th for an agent to do nothing). Figure \ref{fig:dueling} shows how this was reflected in our implementations of the DQN and Dueling DQN architectures.
 
-\begin{figure}[h]
+\begin{figure}[t]
 \centering
 	\includegraphics[width=\columnwidth, keepaspectratio]{dueling.png}
 	\caption{Illustration comparing the difference between our regular DQN and our Dueling DQN within the neural network}
@@ -884,7 +883,7 @@ The training procedure for these agents was primarily run on a server comprised 
 
 To evaluate our models, we trained them for 3000 episodes on each of the three environments introduced in section 3.1. A typical learning process is depicted in Figure \ref{fig:tboard}. As epsilon decreases and the policy of the agent gradually turns from a random policy to a greedy, informed policy, an upward trend can be seen in the mean reward. A large part of the fluctuations in the training process can be attributed to the inherent randomness of the environment, such as the distance from the cursor to the generated button, and the size of said button.
 
-\begin{figure}[h!]
+\begin{figure}[t!]
 \centering
 	\includegraphics[width=\columnwidth, keepaspectratio]{learningcurve.png}
 	\caption{A typical learning curve of our Double Dueling DQN agent on the ClickTest-v0 environment, plotted as reward per episode and smoothed for clarity. In 3000 episodes, the mean reward rises from around 0 to around 0.4.}
@@ -893,7 +892,7 @@ To evaluate our models, we trained them for 3000 episodes on each of the three e
 
 For comparison, we included an agent which samples each action uniformly at random. For our agents to add value, they would need to outperform said random agent. Tables \ref{results-clicktest}, \ref{results-focustext} and \ref{results-closedialog} demonstrate a performance improvement of up to several percent units in the percentage of successful episodes for the Double Dueling DQN and a mean reward approximately 0.10 higher than the baseline. The Double DQN and Policy Gradient methods also surpass the random agent in mean reward on some environments. Although the exact metrics are subject to variation between individual runs, the effect is mostly counterbalanced by averaging both figures over the last 1000 episodes.
 
-\begin{table}[!h]
+\begin{table}[!t]
 %% increase table row spacing, adjust to taste
 \renewcommand{\arraystretch}{1.3}
 % if using array.sty, it might be a good idea to tweak the value of
@@ -919,7 +918,7 @@ Policy Gradient & 0.1511 & 65.30\\
 \end{tabular}
 \end{table}
 
-\begin{table}[!h]
+\begin{table}[!t]
 \renewcommand{\arraystretch}{1.3}
 \caption{Results on FocusText-v0}
 \label{results-focustext}
@@ -940,7 +939,7 @@ Policy Gradient &  0.2165 & 70.55\\
 \end{table}
 
 
-\begin{table}[!h]
+\begin{table}[!t]
 \renewcommand{\arraystretch}{1.3}
 \caption{Results on CloseDialog-v0}
 \label{results-closedialog}
@@ -959,9 +958,6 @@ Policy Gradient & &\\
 \hline
 \end{tabular}
 \end{table}
-
-
-
 
 \section{Analysis}
 %suggestions:
