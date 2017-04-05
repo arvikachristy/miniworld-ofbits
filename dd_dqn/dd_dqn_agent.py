@@ -98,10 +98,10 @@ class QLearner():
     
     self.td_error = tf.square(self.targetQ - self.Q)
     self.loss = tf.reduce_mean(self.td_error)
-    #self.learning_rate = tf.placeholder(shape=[], dtype=tf.float32)
-    self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
-    self.updateModel = self.trainer.minimize(self.loss)
-    #self.updateModel = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+    self.learning_rate = tf.placeholder(shape=[], dtype=tf.float32)
+    self.updateModel = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+    #self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
+    #self.updateModel = self.trainer.minimize(self.loss)
 
 def rgbToGrayscale(img):
     h, w, _ = img.shape
@@ -378,16 +378,12 @@ def sampleAction(sess, raw_s, s, prevX, prevY, mainQN, num_actions, epsilon, ste
         if a_num != -1:
             return a_num
 
-    QOut = sess.run(mainQN.QOut, feed_dict={mainQN.imageIn:[s]})[0]
-    Value = sess.run(mainQN.Value, feed_dict={mainQN.imageIn:[s]})[0]
-    Advantage = sess.run(mainQN.Advantage, feed_dict={mainQN.imageIn:[s]})[0]
+    QOut, Value, Advantage = sess.run([mainQN.QOut, mainQN.Value, mainQN.Advantage], feed_dict={mainQN.imageIn:[s]})
+    QOut, Value, Advantage = QOut[0], Value[0], Advantage[0]
     print QOut, 'V', Value, 'A', Advantage
     if np.random.rand(1) < epsilon or total_steps < pre_train_steps:
         a_num = np.random.randint(0, num_actions)
     else:
-        #QOut, Value, Advantage = sess.run(mainQN.QOut, mainQN.Value, mainQN.Advantage,feed_dict={mainQN.imageIn:[s]})[0]
-        #print 'V, A before QOut calculation:', Value, Advantage
-        #QOut = Value + tf.subtract(Advantage, tf.reduce_mean(Advantage, reduction_indices=1, keep_dims=True))
         a_num = chooseActionFromQOut(QOut, stochastic_policy, use_softmax, print_probs=True)
         print step_num, 'Decided',
         action_numbers = {0: 'CLICK', 1: 'UP', 2: 'DOWN', 3: 'LEFT', 4: 'RIGHT', 5: 'STAY'}
@@ -424,7 +420,7 @@ def trainQNs(sess, mainQN, targetQN, learning_rate, stochastic_policy, use_softm
         feed_dict={mainQN.imageIn:np.stack(trainBatch[:,0]),
             mainQN.targetQ:targetQ,
             mainQN.actions:trainBatch[:,1]})
-            #mainQN.learning_rate:learning_rate})
+            mainQN.learning_rate:learning_rate})
 
 def printSummary(stepList, rList, e, learning_rate, rewards, successes, fails, misses):
     print 'Actions taken', np.sum(stepList)
