@@ -697,7 +697,7 @@ Reinforcement Learning, Deep Learning, Mini World of Bits, Action Spaces, Policy
 % 
 % Here we have the typical use of a "T" for an initial drop letter
 % and "HIS" in caps to complete the first word.
-\IEEEPARstart{O}{ver} the past few years, there has been a monumental shift in technology and how it's been applied to everyday life, of which deep reinforcement learning (RL) is a field which has recently shown potential due to the technology available. With traditional algorithms, computers are explicitly told how to solve a problem, but with deep learning, they are able to teach themselves how to deal with these problems. At its simplest, the goal in RL is to determine an optimal way for an agent to act in an environment to achieve maximal reward. Significant progress has already been demonstrated in experiments on the Universe platform, where agents have been trained using deep reinforcement learning to successfully play Atari games \cite{deepqlearning}\cite{mnih2015human}. We have looked into extending the implementation of deep reinforcement learning methods into browser-based tasks. This introduction will give the reader an insight into the technologies involved as well as derive a hypothesis for the experiments to follow.
+\IEEEPARstart{O}{ver} the past few years, there has been a monumental shift in technology and how it's been applied to everyday life, of which deep reinforcement learning (RL) is a field which has recently shown potential due to the technology available \cite{li2017deep}. With traditional algorithms, computers are explicitly told how to solve a problem, but with deep learning, they are able to teach themselves how to deal with these problems. At its simplest, the goal in RL is to determine an optimal way for an agent to act in an environment to achieve maximal reward. Significant progress has already been demonstrated in experiments on the Universe platform, where agents have been trained using deep reinforcement learning to successfully play Atari games \cite{deepqlearning}\cite{mnih2015human}. We have looked into extending the implementation of deep reinforcement learning methods into browser-based tasks. This introduction will give the reader an insight into the technologies involved as well as derive a hypothesis for the experiments to follow.
 
 \subsection{OpenAI Universe}
 Universe is a software platform developed by OpenAI for training intelligent agents and measuring their performance across a wide range of games and websites. On this platform, any program can be turned into a testing environment using Gym, a toolkit for developing and comparing reinforcement learning algorithms. Gym provides agents access to programs via a VNC client on a remote desktop running inside a Docker container. This allows the agent to perceive and act on the program the same way a human does by interpreting the pixel values of a screen and producing a combination of keyboard and/or mouse actions in response.
@@ -777,7 +777,9 @@ T_{DQN}\; = ( R\; +\; \lambda \max _{a}Q\left( \mbox{S}_{t+1},\; A_{t+1},\; \the
 
 With the loss function defined as follows:
 \begin{equation}
+\begin{split}
 L\left( \theta  \right)\; =\; \mbox{E}_{\mbox{S},A,\mbox{S}_{t+1},R,D}\; \cdot \; \left[ \left(T_{DQN}\; -\; Q\left( \mbox{S},\; A,\; \theta  \right) \right)^{2}\right]
+\end{split}
 \end{equation}
 
 \item \textbf{Experience Replay} : Before the training process, the agent's experiences at each time step $t$ are stored in the form of a tuple represented as (\({{S}}_{{t}}\), \({{A}}_{{t}}\), \({{R}}_{{t+1}}\), \({{S}}_{{t+1}}\), \(d\)), with \(d\) a boolean variable signifying if the step completes the episode. These tuples are stored in a replay memory \(D\) with a certain initial capacity. At every training step, the agent samples a batch of tuples from \(D\) that is fed into the network to update the Q-function. This process was later improved upon with the introduction of \textit{Prioritized Experience Replay}\cite{per}, which makes an addition of error-indices to each tuple, representing how much this experience differs from the predictions of the policy, and stores the tuples in a binary heap tree instead of a linear buffer.
@@ -791,7 +793,9 @@ Building on the DQN architecture, the Dueling DQN approach \cite{wang2015dueling
 \subsubsection{Double Deep Q-learning}
 The DQN uses a max operator to select and evaluate actions upon a given state with the target network. The problem with this approach is that this can lead to selection of overestimated values, which can delay the time in learning the optimal policy. A simple improvement to this, referred to as the Double Deep Q-Network \cite{doubledeepqlearning}, uses a different equation to update the target value :
 \begin{equation}
+\begin{aligned}
 T_{DDQN}\; =\; R\; +\; \lambda Q\left( \mbox{S}_{t+1},\; \mbox{argmax}Q\left( \mbox{S}_{t+1},\; a,\; \theta ^{-} \right),\; \theta ^{-} \right)
+\end{aligned}
 \end{equation}
 \subsection{Imitation learning}
 In scenarios with large action spaces and complicated tasks, exploring the entire action space uniformly at random can be intractable. In such a case, training can more efficiently begin based on a set of supervised, ideal actions. In Inverse Reinforcement Learning, the agent learns the reward function of the environment by observing these optimal actions performed by an expert, rather than learning a policy or a value function through its own actions. Using this learning method, Abbeel and Ng were able to retrieve a policy with comparable performance to that of the original expert \cite{abbeel2004apprenticeship}.
@@ -960,7 +964,7 @@ Dueling DQN & &\\
 \hline
 Double Dueling DQN & -0.6595 & 22.07\\
 \hline
-Policy Gradient & &\\
+Policy Gradient & -0.0868 & 25.85\\
 \hline
 \end{tabular}
 \end{table}
@@ -990,7 +994,7 @@ Our models combine CNNs with reinforcement learning, providing a good generalisa
 Our agents learn under a model-free environment which means they have access to limited information about the environments -- only reward signals and raw pixel values. In the future, by taking advantage of the benchmark source code, the agent could fully understand and interpret certain aspects about the environment, such as what kind of HTML components they consist of, the positions/sizes of these elements, and from these derive an optimal policy. % in each step during training process, thus speeding up the training process by using reward manipulation.
 Furthermore, by using a model-based learning algorithm, we could analyse the training process by recording and illustrating model parameters in addition to reward. 
 
-In addition, working with the MWoB ecosystem involved a number technical limitations that might have affected our training. This included a lack of synchronisation between the reward signals and the environment state. Had the MWoB environment been more stable, our agents'™ performance may have been more accurate than we now observed.
+In addition, working with the MWoB ecosystem involved a number technical limitations that might have affected our training. This included a lack of synchronisation between the reward signals and the environment state. Had the MWoB environment been more stable, our agents'ï¿½ performance may have been more accurate than we now observed.
 
 \section{Conclusion and Future work}
 \subsection{Conclusion}

@@ -26,12 +26,10 @@ def discount_rewards(r):
     if abs(set_reward[0]) < 0.00001:
         set_reward[0]=-1    
     for t in reversed(xrange(0, r.size)):
-        #print "discount", r, "ddfg", r[t]
         get_reward = r[t]
         running_add = running_add * gamma + get_reward[0]
         print "get rew", get_reward ,"and run add", running_add
         discounted_r[t] = running_add
-        # print discounted_r ,"dis"
     return discounted_r
 
 class agent():
@@ -43,8 +41,6 @@ class agent():
         self.output = slim.fully_connected(hidden,a_size,activation_fn=tf.nn.softmax,biases_initializer=None)
         self.chosen_action = tf.argmax(self.output,1)
         self.debug = tf.shape(self.output)[0]
-        #The next six lines establish the training proceedure. We feed the reward and chosen action into the network
-        #to compute the loss, and use it to update the network.
         self.reward_holder = tf.placeholder(shape=[None],dtype=tf.float32)
         self.action_holder = tf.placeholder(shape=[None],dtype=tf.int32)
         
@@ -116,29 +112,12 @@ def manipulateState(s, coordX,coordY):
             vi = s[0]['vision']
             mid = vi[75:75+210, 10:10+160, :]
             square = mid[75+50:75+50+160, 10:10+160, :] 
-            # divide by 5
-            # lowres = scipy.misc.imresize(crop, (42, 32, 3))
-            # lowresT = tf.pack(lowres)
 
-            #making it from RGB to grayscale
             grey = rgb2gray(square)
             coords = corner_peaks(corner_harris(grey), num_peaks=20, min_distance=5)
-            # print coords, "SUBPIX SIZE"
             coords_subpix = corner_subpix(grey, coords)
-
-            # if math.isnan(goal_y) or math.isnan(goal_x):
-            #  return []
-
-
             num_coords = coords.shape[0]
             coords_array = np.zeros((1344,2))
-
-            # center= np.mean(center, axis=1)
-            
-            # coords_subpix = np.reshape(coords_subpix, (1,22))
-
-            # stacked = tf.stack([coords_subpix], axis=0)
-            # print tf.reshape(coords_subpix, shape=[1, -1]).eval(), "HOLO"
             coords_array[:num_coords, :]=coords
             return tf.reshape(coords_array, shape=[1, -1]).eval()
     return np.zeros(shape=[1,84*32])
@@ -146,7 +125,7 @@ def manipulateState(s, coordX,coordY):
 
 myAgent = agent(lr=1e-2,s_size=84*32,a_size=5,h_size=1036) #Load the agent.
 #s_sze is expecting one input coz its a flat vector (array), sp
-total_episodes = 1000#Set total number of episodes to train agent on.
+total_episodes = 1000 #Set total number of episodes to train agent on.
 update_frequency = 1
 success_rate = 0
 tboard_summaries = True
@@ -172,9 +151,6 @@ with tf.Session() as sess:
     cur_episode = 0
     
     #starting cursor in the middle of the frame
-
-    # while not validObserv(s):
-    #     s1,r,d,_ = env.step([[universe.spaces.PointerEvent(coordX, coordY)]])
     coordX = np.random.randint(0, 80)+10
     coordY = np.random.randint(0, 80)+125
     gradBuffer = sess.run(tf.trainable_variables())
@@ -183,8 +159,6 @@ with tf.Session() as sess:
 
     end_rewards =0
     while i < total_episodes:
-        # coordX=0
-        # coordY=0
         coordX = np.random.randint(0, 80)+10
         coordY = np.random.randint(0, 80)+125
         s1,r,d,_ = env.step([[universe.spaces.PointerEvent(coordX, coordY)]])
@@ -200,54 +174,30 @@ with tf.Session() as sess:
         while d != True:
             completed_click+=1
             s = manipulateState(s, coordX, coordY)
-            print "new state", s
-            print "ADDED NOW MY AGENT" , myAgent.output
-            # while not validObserv(s):
-            #     s1,r,d,_ = env.step([[universe.spaces.PointerEvent(coordX, coordY)]])            
-            #Choose either a random action or one from our network.
-
             a_dist = sess.run(myAgent.output,feed_dict={myAgent.state_in:np.array(s)})
             bug1 = sess.run(myAgent.state_in,feed_dict={myAgent.state_in:np.array(s)})
             bug = sess.run(myAgent.output,feed_dict={myAgent.state_in:np.array(s)})
-            # a_dist = [[0.15,0.15,0.15,0.15,0.15,0.25]]
 
-            print "ADDED NOW MY AGENT bug" , bug1
-            print "ADDED NOW MY AGENT TWO" , bug
-            # a_dist = a_dist +1  
-            # print myAgent.output.eval(), "CHOSEN Aoutput"
             print myAgent.chosen_action, "CHOSEN ACTio"
-            print "adist!0" ,a_dist
             a_dist = 0.75 * (a_dist + np.ones((1, 5)) / 5) #average uniform probability
-            print "adist!1" ,a_dist
             a_dist /= a_dist.sum()
-            print "adist!2" ,a_dist
-            #pick from 0-6 choices and get the probability
             a = np.random.choice(np.arange(0,5),p=a_dist[0])
             
-            #a = np.argmax(a_dist == a) #takes the highest value from the array, but why a_dist==a?
             actionset= doAction(a, coordX, coordY)
             
-            print "GDJHSGD", actionset
             s1,r,d,_ = env.step([actionset[0]]) #Get our reward for taking an action given a bandit.
-            #print "GDJHSGD", actionset
-            print "DONE?", d, "I'm in episode:", cur_episode
-            
-            print "Chosen action:", a, "and HEREEE", r[0]
+            print "Am I done?", d, "current episode:", cur_episode
+            print "Chosen action:", a, "and its reward:", r[0]
             ep_history.append([s,a,r,s1])
             s = s1
 
-            print "gfhgj", len(r)
             if d[0] == True:
                 print_cur_reward.append(r[0])
-                print "Reward each click:", print_cur_reward
-                print "HErEEEEEEEEEE TRUEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
                 #Update the network.
                 ep_history = np.array(ep_history)
                 ep_history[:,2] = discount_rewards(ep_history[:,2])
-                print "HISTORY", ep_history[:,2]
                 feed_dict={myAgent.reward_holder:ep_history[:,2],
                         myAgent.action_holder:ep_history[:,1],myAgent.state_in:np.vstack(ep_history[:,0])}
-                print "FEED DOCK", feed_dict
                 grads = sess.run(myAgent.gradients, feed_dict=feed_dict)
                 for idx,grad in enumerate(grads):
                     gradBuffer[idx] += grad
@@ -260,9 +210,6 @@ with tf.Session() as sess:
 
                 if(r[0]>0):
                     success_rate += 1
-
-                print "Success rate now!: ", success_rate
-
                 if tboard_summaries:
                     episode_summary = tf.Summary()
                     episode_summary.value.add(simple_value=r[0], tag="Reward")
@@ -271,9 +218,7 @@ with tf.Session() as sess:
                     summary_writer.flush()
                     total_t+=1                        
                 running_reward += r[0]
-                print "Total Cumulative Reward now:", running_reward, "R is here",r
                 total_reward.append(running_reward)
-                # total_lenght.append(j)
                 d=True
                 break
             env.render()
@@ -281,9 +226,7 @@ with tf.Session() as sess:
         cumulative_r = float(end_rewards/total_episodes)
         print "current CUMULATIVE", cumulative_r
         d=False
-        # print (running_reward/float(10)), "heyo", completed_click
-        # print_tot_reward.append(running_reward/float(10))
-            #Update our running tally of scores.
+
         if i % 100 == 0:
             print np.mean(total_reward[-100:])
         i += 1
