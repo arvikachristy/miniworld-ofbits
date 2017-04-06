@@ -762,7 +762,7 @@ consisting of:
 Q-learning is able to converge on an optimal action-selection policy for a discrete MDP, however, policy gradient methods are more suitable to be adapted for continuous action domains.
 
 \subsubsection{Deep Q-learning}
-For an environment with discrete states, the Q-function can be implemented as a lookup table. However, the problem with naive Q-learning is that dynamic environments can exhibit a large scope of state-action pairs, and without any form of generalization, iterating through each possible state-action pair is highly impractical. Slight changes to the Q-values also have a tendency to result in significant changes to the policy that can diverge the optimization of the Q-function. This problem was addressed by the Deep Q-network (DQN) proposed by Mnih et al. in 2013 \cite{deepqlearning}. DQNs use deep neural networks as Q-function approximators with weights \(\theta\) to help stabilize convergence.
+For an environment with discrete states, the Q-function can be implemented as a lookup table. However, the problem with naive Q-learning is that dynamic environments can exhibit a large scope of state-action pairs, and without any form of generalization, iterating through each possible state-action pair is highly impractical. Slight changes to the Q-values also have a tendency to result in significant changes to the policy that can diverge the optimization of the Q-function. This problem was addressed by the Deep Q-network (DQN) which Mnih et al. proposed in 2013 \cite{deepqlearning} and further developed in 2015 \cite{mnih2015human}. DQNs use deep neural networks as Q-function approximators with weights \(\theta\) to help stabilize convergence.
 %serving as the primary architecture of our off-policy implementation.
 There are three main components to the Deep Q-network as follows:
 \begin{itemize}
@@ -896,7 +896,7 @@ To evaluate our models, we trained them for 3000 episodes on each of the three e
 	\label{fig:tboard}
 \end{figure}
 
-For comparison, we included an agent which samples each action uniformly at random. For our agents to add value, they would need to outperform said random agent. Tables \ref{results-clicktest}, \ref{results-focustext} and \ref{results-closedialog} demonstrate a performance improvement of up to several percent units in the percentage of successful episodes for the Double Dueling DQN and a mean reward approximately 0.10 higher than the baseline. The Double DQN and Policy Gradient methods also surpass the random agent in mean reward on some environments. Although the exact metrics are subject to variation between individual runs, the effect is mostly counterbalanced by averaging both figures over the last 1000 episodes.
+For comparison, we included an agent which samples each action uniformly at random. For our agents to add value, they would need to outperform said random agent. Tables \ref{results-clicktest}, \ref{results-focustext} and \ref{results-closedialog} demonstrate a performance improvement of up to several percent units in the percentage of successful episodes for the Double Dueling DQN and a mean reward approximately 0.10 higher than the baseline -- or 10\% if we translate these rewards from [-1, 1] to [0, 2]. The Double DQN and Policy Gradient methods also surpass the random agent in mean reward on some environments. Although the exact metrics are subject to variation between individual runs, the effect is mostly counterbalanced by averaging both figures over the last 1000 episodes.
 
 \begin{table}[!t]
 %% increase table row spacing, adjust to taste
@@ -947,7 +947,7 @@ Policy Gradient &  0.2165 & 70.55\\
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.3}
-\caption{Results on CloseDialog-v0}
+\caption{Results on ClickDialog-v0}
 \label{results-closedialog}
 \centering
 \begin{tabular}{|c||c|c|}
@@ -958,7 +958,7 @@ Random agent & -0.6676 & 21.74 \\
 \hline
 Dueling DQN & &\\
 \hline
-Double Dueling DQN & -0.0821 & 58.42\\
+Double Dueling DQN & -0.6595 & 22.07\\
 \hline
 Policy Gradient & &\\
 \hline
@@ -969,7 +969,7 @@ Policy Gradient & &\\
 %suggestions:
 Our results show that the Double Duelling DQN performs significantly better than Double DQN and Policy Gradient in the three tasks included. The additional dueling capabilities allowed it to overcome the problem of Q-values converging to zero over time. In addition, methods such as input dimensionality reduction, a combination of convolutional and fully connected layers and an appropriate rate of training boosted its learning performance. On the other hand, we found that including supervised actions to start with did not significantly increase the long-term performance our agents. \\
 
-When comparing results across the three tasks investigated, it is apparent that some of them were harder than others to solve. The performance of the baseline random agent served as an indication of the overall difficulty of each environment. Out of the tasks we considered, CloseDialog was the most difficult, as its target region was significantly smaller and less visually conspicuous than that of other environments. What boosted the performance of both random and learning agents on the FocusText environment was further reducing the action space by omitting horizontal actions, which allowed the agents to only focus on vertical and click actions. \\
+When comparing results across the three tasks investigated, it is apparent that some of them were harder than others to solve. The performance of the baseline random agent served as an indication of the overall difficulty of each environment. Out of the tasks we considered, ClickDialog was the most difficult, as its target region was significantly smaller and less visually conspicuous than that of other environments. What boosted the performance of both random and learning agents on the FocusText environment was further reducing the action space by omitting horizontal actions, which allowed the agents to only focus on vertical and click actions. \\
 
 On the other hand, unexpectedly low results from some agents may have been due to suboptimal hyperparameter choices for the neural networks, such as the number of hidden neurons. Upon investigating each layer, we found over- and underfitting to be the most likely performance-limiting factors. If overfitting occurs, the network may not be able to generalize to new data. It is very common in neural network implementations to miscalculate the perfect size of the network, and it can be difficult to know (at an early stage of training) the exact size of the network layer that can be deemed suitable for a particular application.
 
