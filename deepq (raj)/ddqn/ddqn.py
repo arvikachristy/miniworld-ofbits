@@ -19,16 +19,19 @@ tf.reset_default_graph()
 ri_dict = {
   "num_Episodes" : 10000,
   'num_Actions' : 5,
-  'replay_memory_size' : 500000,
-  'replay_memory_init_size' : 15000, #15000
-  'update_target_estimator_every' : 500,
-  'discount_factor' : 0.99,
+  'replay_memory_size' : 50000,
+  'replay_memory_init_size' : 500, #750
+  'update_target_estimator_every' : 1000,
+  'discount_factor' : 0.90,
   'epsilon_start' : 1.0,
   'epsilon_end': 0.05,
-  'epsilon_decay_steps': 500000,
+  'epsilon_decay_steps': 300000,
   'batch_size' : 32,
-  'penalty' : -0.05
+  'penalty' : -1.00
 }
+
+isDebug = False
+isDueling = False
 
 # Global dictionary that stores the x-coordinate and y-coordinate values # 
 cord_dict = {
@@ -93,13 +96,15 @@ class qNetwork():
 
     #Fully connected layers
     flattened = tf.contrib.layers.flatten(conv3)
-    fcl = tf.contrib.layers.fully_connected(flattened, 512)
-    self.predictions = tf.contrib.layers.fully_connected(inputs = fcl, num_outputs = ri_dict["num_Actions"])
-    # advantage_net = tf.contrib.layers.fully_connected(flattened, 512, activation_fn = tf.nn.relu)
-    # value_net = tf.contrib.layers.fully_connected(flattened, 512, activation_fn = tf.nn.relu)
-    # advantage = tf.contrib.layers.fully_connected(inputs = advantage_net, num_outputs = ri_dict["num_Actions"])
-    # value = tf.contrib.layers.fully_connected(value_net, 1)
-    # self.predictions = value + tf.subtract(advantage, tf.reduce_mean(advantage, reduction_indices=1, keep_dims=True))
+    if isDueling == True:
+      advantage_net = tf.contrib.layers.fully_connected(flattened, 512, activation_fn = tf.nn.relu)
+      value_net = tf.contrib.layers.fully_connected(flattened, 512, activation_fn = tf.nn.relu)
+      advantage = tf.contrib.layers.fully_connected(inputs = advantage_net, num_outputs = ri_dict["num_Actions"])
+      value = tf.contrib.layers.fully_connected(value_net, 1)
+      self.predictions = value + tf.subtract(advantage, tf.reduce_mean(advantage, reduction_indices=1, keep_dims=True))
+    else:
+      fcl = tf.contrib.layers.fully_connected(flattened, 512)
+      self.predictions = tf.contrib.layers.fully_connected(inputs = fcl, num_outputs = ri_dict["num_Actions"])
 
     #Get the predictions for the chosen actions only
     gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions_pl
@@ -110,8 +115,7 @@ class qNetwork():
     self.loss = tf.reduce_mean(self.losses)
 
     #Optimizer parameters
-    # self.optimizer = tf.train.AdamOptimizer(learning_rate = 0.00025)
-    self.optimizer = tf.train.RMSPropOptimizer(0.00025, 0.99, 0.0, 1e-6)
+    self.optimizer = tf.train.RMSPropOptimizer(0.0001, 0.99, 0.0, 1e-6)
     self.train_op = self.optimizer.minimize(self.loss, global_step=tf.contrib.framework.get_global_step())
 
     self.summaries = tf.summary.merge([
@@ -135,7 +139,6 @@ class qNetwork():
 
 def copy_model_parameters(sess, estimator1, estimator2):
   #Copies the model parameters of one qNet to another
-
   e1_params = [t for t in tf.trainable_variables() if t.name.startswith(estimator1.scope)]
   e1_params = sorted(e1_params, key = lambda v:v.name)
   e2_params = [t for t in tf.trainable_variables() if t.name.startswith(estimator2.scope)]
@@ -214,8 +217,10 @@ def newCord(act):
 def randCord():
   cord_dict["xCord"] = np.random.choice(np.arange(10,170))
   cord_dict["yCord"] = np.random.choice(np.arange(125,285))
-  # sess.run(cord_dict["xCord"].assign(tf.random_uniform([1],minval = 10, maxval = 170, dtype = tf.int32)))
-  # sess.run(cord_dict["yCord"].assign(tf.random_uniform([1],minval =125, maxval = 285, dtype = tf.int32)))
+
+def centreCord():
+  cord_dict["xCord"] = 90
+  cord_dict["yCord"] = 205
 
 # chooseAction produces a random integer (representing the action to take) based on the action probabilities table
 def chooseAction(action_prob):
@@ -229,16 +234,22 @@ def doAction(act_num):
   if act_num == -2:
     penalty = 0
     action = [universe.spaces.PointerEvent(cord_dict["xCord"], cord_dict["yCord"],0)]
-    return penalty, action
+    isDone = False
+    return penalty, isDone, action
   elif act_num == 0:
     penalty = 0
     action = [universe.spaces.PointerEvent(cord_dict["xCord"], cord_dict["yCord"],1),
               universe.spaces.PointerEvent(cord_dict["xCord"], cord_dict["yCord"],0)]
-    return penalty, action
+    isDone = False
+    return penalty, isDone, action
   else:
     penalty = newCord(act_num)
     action = [universe.spaces.PointerEvent(cord_dict["xCord"], cord_dict["yCord"],0)]
-    return penalty, action
+    if penalty == ri_dict['penalty']:
+      isDone = True
+    else:
+      isDone = False
+    return penalty, isDone, action
 
 def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc):
   #Uses the namedTuple module to initialize Experience Replay tuple
@@ -281,15 +292,16 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
   #Populate the replay memory with initial experience
   print "Populating replay memory"
   state = env.reset()
+  centreCord()
+  penalty, isDone, action = doAction(-2)
   #There are instances were the states returned are [None]. This loop will iterate until a legitimate state is returned
   if np.array_equal(state, [None]):
     while state == [None]:
-      state, reward, done, _ = env.step([[]])
+      state, reward, done, _ = env.step([action])
 
   state = state_proc.process(sess, (state[0])['vision'])
   # We stack to take 4 instances of states
   state = np.stack([state] * 4, axis = 2)
-  randCord()
 
   #The following loop is to simply fill the replay memory with transition tuples. The number of iterations is stated in the initial parameters
   for i in range(ri_dict["replay_memory_init_size"]):
@@ -300,44 +312,58 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
     action_probs = policy(sess, state, epsilons[min(total_t, ri_dict["epsilon_decay_steps"]-1)])
     print action_probs
     act = chooseAction(action_probs)
-    penalty, action = doAction(act)
+    penalty, isDone, action = doAction(act)
 
     #Take a step in the environment from the predicted action
     next_state, reward, done, _ = env.step([action])
+    if isDone:
+      done = [True]
     reward[0] = reward[0] + penalty
     if np.array_equal(next_state, [None]):
-      # pre_state = state
-      # pre_reward = reward
-      # pre_done = done
       #The environment is resetting (likely time is up and is done)
       state = env.reset()
+      centreCord()
+      penalty, isDone, action = doAction(-2)
       if np.array_equal(state, [None]):
         while state == [None]:
-          state, reward, done, _ = env.step([[]])
+          state, reward, done, _ = env.step([action])
       state = state_proc.process(sess, (state[0])['vision'])
       state = np.stack([state] * 4, axis = 2)
-      # replay_memory.append(Transition(pre_state,act,pre_reward,state,pre_done))
     else:
       next_state = state_proc.process(sess, (next_state[0])['vision'])
       next_state = np.append(state[:,:,1:], np.expand_dims(next_state,2),axis = 2)
-      replay_memory.append(Transition(state,act,reward[0],next_state,done[0]))
       if done == [True]:
+        if reward[0] == -1:
+          if isDone == True:
+            replay_memory.append(Transition(state,act,reward[0],next_state,done[0]))
+          else:
+            print "Time is up, do not add to Experience Replay"
+        else:
+          replay_memory.append(Transition(state,act,reward[0],next_state,done[0]))
         state = env.reset()
+        centreCord()
+        penalty, isDone, action = doAction(-2)
         if np.array_equal(state, [None]):
           while state == [None]:
-            state, reward, done, _ = env.step([[]])
+            state, reward, done, _ = env.step([action])
         state = state_proc.process(sess, (state[0])['vision'])
         state = np.stack([state] * 4, axis = 2)
       else:
+        replay_memory.append(Transition(state,act,reward[0],next_state,done[0]))
         state = next_state
 
   state = env.reset()
+  centreCord()
+  penalty, isDone, action = doAction(-2)
   if np.array_equal(state, [None]):
     while state == [None]:
-      state, reward, done, _ = env.step([[]])
+      state, reward, done, _ = env.step([action])
   state = state_proc.process(sess, (state[0])['vision'])
   state = np.stack([state] * 4, axis = 2)
 
+  success_Episodes = 0
+  total_e = 1
+  success_rate = 0
   #Once replay memory initialization is completed, run the training process
   for i in range(ri_dict["num_Episodes"]):
     #Save the current checkpoint
@@ -369,21 +395,21 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
       action_probs = policy(sess, state, epsilon)
       print action_probs
       act = chooseAction(action_probs)
-      penalty, action = doAction(act)
+      penalty, isDone, action = doAction(act)
       next_state, reward, done, _ = env.step([action])
+      if isDone:
+        done = [True]
       reward[0] = reward[0] + penalty
       if np.array_equal(next_state, [None]):
         #The environment is resetting (likely time is up and is done)
-        # pre_state = state
-        # pre_reward = reward
-        # pre_done = done
         state = env.reset()
+        centreCord()
+        penalty, isDone, action = doAction(-2)
         if np.array_equal(state, [None]):
           while state == [None]:
-            state, reward, done, _ = env.step([[]])
+            state, reward, done, _ = env.step([action])
         state = state_proc.process(sess, (state[0])['vision'])
         state = np.stack([state] * 4, axis = 2)
-        # replay_memory.append(Transition(pre_state,act,pre_reward,state,pre_done))
         break
       else:
         next_state = state_proc.process(sess, (next_state[0])['vision'])
@@ -391,11 +417,12 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
         #If our replay memory is full, pop the first element
         if len(replay_memory) == ri_dict["replay_memory_size"]:
           replay_memory.pop(0)
-        #Save transition to replay memory
-        replay_memory.append(Transition(state,act,reward[0],next_state,done[0]))
 
       #Update Statistics
-      stats.episode_rewards[i] += reward
+      if np.less_equal(stats.episode_rewards[i] + reward[0], -1):
+        stats.episode_rewards[i] = reward[0]
+      else:
+        stats.episode_rewards[i] += reward[0]
       stats.episode_lengths[i] = t
 
       #Sample a minibatch from the replay memory
@@ -413,27 +440,49 @@ def deep_q_learning(sess, env,experiment_dir,qnetwork, targetNetwork, state_proc
       loss = qnetwork.update(sess, states_batch, action_batch, targets_batch)
 
       if done == [True]:
+        if reward[0] == -1:
+          if isDone == True:
+            replay_memory.append(Transition(state,act,reward[0],next_state,done[0]))
+          else:
+            print "Time is up, do not add to Experience Replay"
+        else:
+          #Save transition to Experience Replay
+          replay_memory.append(Transition(state,act,reward[0],next_state,done[0]))
+          success_Episodes = success_Episodes + 1
+
         state = env.reset()
+        centreCord()
+        penalty, isDone, action = doAction(-2)
         if np.array_equal(state, [None]):
           while state == [None]:
-            state, reward, done, _ = env.step([[]])
+            state, reward, done, _ = env.step([action])
         state = state_proc.process(sess, (state[0])['vision'])
         state = np.stack([state] * 4, axis = 2)
         break
+      else:
+        replay_memory.append(Transition(state,act,reward[0],next_state,done[0]))
 
       state = next_state
       total_t += 1
 
+    total_e += 1
     #Add summaries to Tensorboard
     episode_summary = tf.Summary()
     episode_summary.value.add(simple_value = stats.episode_rewards[i], node_name = "episode_reward", tag = "episode_reward")
     episode_summary.value.add(simple_value = stats.episode_lengths[i], node_name = "episode_lengths", tag = "episode_lengths")
+    if total_e >= 100:
+      success_rate = float(success_Episodes)/float(total_e)
+      episode_summary.value.add(simple_value = success_rate, node_name = "success_rate", tag = "success_rate")
     qnetwork.summary_writer.add_summary(episode_summary, total_t)
     qnetwork.summary_writer.flush()
 
+    if total_e >= 100:
+      success_Episodes = 0
+      total_e = 1
+
     yield total_t, plotting.EpisodeStats(episode_lengths = stats.episode_lengths[:i+1],episode_rewards = stats.episode_rewards[:i+1])
 
-env = gym.make('wob.mini.TicTacToe-v0')
+env = gym.make('wob.mini.ClickDialog-v0')
 env.configure(remotes=1, fps=15,
               vnc_driver='go', 
               vnc_kwargs={'encoding': 'tight', 'compress_level': 0, 
