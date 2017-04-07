@@ -891,14 +891,15 @@ The training procedure for these agents was primarily run on a server comprised 
 
 \section{Results}
 
-To evaluate our models, we trained them for 3000 episodes on each of the three environments introduced in section 3.1. A typical learning process is depicted in Figure \ref{fig:tboard}. As epsilon decreases and the policy of the agent gradually turns from a random policy to a greedy, informed policy, an upward trend can be seen in the mean reward. A large part of the fluctuations in the training process can be attributed to the inherent randomness of the environment, such as the distance from the cursor to the generated button, and the size of said button.
-
 \begin{figure}[t!]
 \centering
 	\includegraphics[width=\columnwidth, keepaspectratio]{learningcurve.png}
-	\caption{A typical learning curve of our Double Dueling DQN agent on the ClickTest-v0 environment, plotted as reward per episode and smoothed for clarity. In 3000 episodes, the mean reward rises from around 0 to around 0.4.}
+	\includegraphics[width=\columnwidth, keepaspectratio]{dqnlearningcurve.png}
+	\caption{A typical learning curve of an agent, smoothed for clarity. The top figure showcases the Double Dueling DQN agent on the ClickTest-v0 environment, plotted as reward per episode upon the total number of episodes. In 3000 episodes, the mean reward rises from around 0 to around 0.4. The bottom figure showcases the Double DQN agent on the ClickDialog-v0 environment, plotted as reward per episode upon the number of total steps. This agent was left to run for a significantly longer duration of 10,000 episodes (roughly 270,000 steps), displaying the gradual learning behavior towards the latter half of the graph}
 	\label{fig:tboard}
 \end{figure}
+
+To evaluate our models, we trained them for 3000 episodes on each of the three environments introduced in section 3.1. A typical learning process is depicted in Figure \ref{fig:tboard}. As epsilon decreases and the policy of the agent gradually turns from a random policy to a greedy, informed policy, an upward trend can be seen in the mean reward. A large part of the fluctuations in the training process can be attributed to the inherent randomness of the environment, such as the distance from the cursor to the generated button, and the size of said button.
 
 For comparison, we included an agent which samples each action uniformly at random. For our agents to add value, they would need to outperform said random agent. Tables \ref{results-clicktest}, \ref{results-focustext} and \ref{results-closedialog} demonstrate a performance improvement of up to several percent units in the percentage of successful episodes for the Double Dueling DQN and a mean reward approximately 0.10 higher than the baseline -- or 10\% if we translate these rewards from [-1, 1] to [0, 2]. The Double DQN and Policy Gradient methods also surpass the random agent in mean reward on some environments. Although the exact metrics are subject to variation between individual runs, the effect is mostly counterbalanced by averaging both figures over the last 1000 episodes.
 
