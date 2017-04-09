@@ -363,9 +363,11 @@ def generateSupervisedAction(s, prevX, prevY, cursorH, cursorW, step_size, inclu
 
 def sampleAction(sess, raw_s, s, prevX, prevY, mainQN, num_actions, epsilon, step_num, total_steps, pre_train_steps, \
                  supervised_episode, stochastic_policy, use_softmax, include_prompt, cursorH, cursorW, step_size=15):
-    # TODO:
-    # check if s needs to be unprocessed
     
+    QOut, Value, Advantage = sess.run([mainQN.QOut, mainQN.Value, mainQN.Advantage], feed_dict={mainQN.imageIn:[s]})
+    QOut, Value, Advantage = QOut[0], Value[0], Advantage[0]
+    print QOut, 'V', Value, 'A', Advantage
+
     if supervised_episode:
         # Use full size image for corner detection
         full_size_s = raw_s[0]['vision']
@@ -376,11 +378,9 @@ def sampleAction(sess, raw_s, s, prevX, prevY, mainQN, num_actions, epsilon, ste
         a_num = generateSupervisedAction(full_size_s, prevX, prevY, cursorH, cursorW, step_size, include_prompt, num_actions, step_num)
         #print a_num
         if a_num != -1:
-            return a_num
+            return a_num, QOut, Value, Advantage
 
-    QOut, Value, Advantage = sess.run([mainQN.QOut, mainQN.Value, mainQN.Advantage], feed_dict={mainQN.imageIn:[s]})
-    QOut, Value, Advantage = QOut[0], Value[0], Advantage[0]
-    print QOut, 'V', Value, 'A', Advantage
+    
     if np.random.rand(1) < epsilon or total_steps < pre_train_steps:
         a_num = np.random.randint(0, num_actions)
     else:
