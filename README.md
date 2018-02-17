@@ -1,4 +1,4 @@
-##Mini World of Bits
+## Mini World of Bits
 
 Deep learning is an emerging field that has shown many recent breakthroughs due to advances in computing power,
 algorithms and the scale of data sets. Within reinforcement learning, deep learning has shown to be effective in game-like
